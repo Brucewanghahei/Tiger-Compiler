@@ -30,5 +30,23 @@ var => (Tokens.VAR(yypos, yypos+3));
 ";" => (Tokens.SEMICOLON(yypos, yypos+1));
 ":" => (Tokens.COLON(yypos, yypos+1));
 ","	=> (Tokens.COMMA(yypos, yypos+1));
+in => (Tokens.IN(yypos, yypos + 2));
+nil => (Tokens.NIL(yypos, yypos + 3));
+function => (Tokens.FUNCTION(yypos, yypos + 8));
+var => (Tokens.VAR(yypos, yypos + 3));
+do => (Tokens.DO(yypos, yypos + 2));
+to => (Tokens.TO(yypos, yypos + 2));
+for => (Tokens.FOR(yypos, yypos + 3));
+while => (Tokens.WHILE(yypos, yypos + 5));
+else => (Tokens.ELSE(yypos, yypos + 4));
+then => (Tokens.THEN(yypos, yypos + 4));
+if => (Tokens.IF(yypos, yypos + 2));
+bbb => (Tokens.ID("\"", yypos, yypos+1));
+\"([^\\"]|\\([nt"]|\^.|[0-9]{3}|[\t\n\ ]*\\))*\" => (let val text = String.translate(fn ch =>
+						     case ch of
+										 (#"\n" | #"\t" | #" ") => "" 
+										 |  _ => String.str(ch)
+						     ) yytext;
+						     in Tokens.STRING(text, yypos, yypos + 2) end);
 . => (err (yypos, ("illegal character " ^ yytext)); continue());
 
