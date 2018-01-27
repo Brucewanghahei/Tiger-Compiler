@@ -5,14 +5,31 @@ val lineNum = ErrorMsg.lineNum
 val linePos = ErrorMsg.linePos
 fun err(pos, msg) = ErrorMsg.error pos msg
 
-fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
+val commentLevel = ref 0
+fun commentIncLevel() = commentLevel := !commentLevel + 1
+fun commentDecLevel() = commentLevel := !commentLevel - 1
+
+fun eof() =
+    let
+        val pos = hd(!linePos)
+    in
+        if !commentLevel <> 0 then
+            err(pos, "unclosed comment")
+        else
+            ();
+        Tokens.EOF(pos,pos)
+    end
 
 %% 
 %s INVALID COMMENT;
+newline = \n;
 %%
 <INVALID> . => (err (yypos, "invalid state"); continue());
+<INITIAL, COMMEMT> newline	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
+<INITIAL> "/*" => (YYBEGIN COMMENT; commentIncLevel(); continue());
+<COMMENT> "/*" => (commentIncLevel(); continue());
+<COMMENT> "*/" => (commentDecLevel(); if !commentLevel = 0 then YYBEGIN INITIAL else (); continue());
 <COMMENT> . => (continue());
-\n	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
 var => (Tokens.VAR(yypos, yypos+3));
 "break" => (Tokens.BREAK(yypos, yypos+5));
 "of" => (Tokens.OF(yypos, yypos+2));
