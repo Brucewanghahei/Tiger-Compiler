@@ -1,0 +1,11 @@
+in => (Tokens.IN(yypos, yypos + 2));
+nil => (Tokens.NIL(yypos, yypos + 3));
+function => (Tokens.FUNCTION(yypos, yypos + 8));
+var => (Tokens.VAR(yypos, yypos + 3));
+do => (Tokens.DO(yypos, yypos + 2));
+to => (Tokens.TO(yypos, yypos + 2));
+for => (Tokens.FOR(yypos, yypos + 3));
+while => (Tokens.WHILE(yypos, yypos + 5));
+else => (Tokens.ELSE(yypos, yypos + 4));
+then => (Tokens.THEN(yypos, yypos + 4));
+if => (Tokens.IF(yypos, yypos + 2));
