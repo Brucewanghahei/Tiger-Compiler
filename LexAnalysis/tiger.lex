@@ -14,7 +14,7 @@ fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
 <COMMENT> . => (continue());
 \n	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
 var => (Tokens.VAR(yypos, yypos+3));
-"}" => (YYBEGIN INITIAL; Tokens.RBRACE(yypos, yypos+1));
+"}" => (Tokens.RBRACE(yypos, yypos+1));
 "{" => (Tokens.LBRACE(yypos, yypos+1));
 "]" => (Tokens.RBRACK(yypos, yypos+1));
 "[" => (Tokens.LBRACK(yypos, yypos+1));
