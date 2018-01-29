@@ -58,6 +58,20 @@ newline = \n;
 <INITIAL> else => (Tokens.ELSE(yypos, yypos + 4));
 <INITIAL> then => (Tokens.THEN(yypos, yypos + 4));
 <INITIAL> if => (Tokens.IF(yypos, yypos + 2));
+<INITIAL> "|" => (Tokens.OR(yypos, yypos + 1)) ;
+<INITIAL> "&" => (Tokens.AND(yypos, yypos + 1));
+<INITIAL> ">=" => (Tokens.GE(yypos, yypos + 2));
+<INITIAL> ">" => (Tokens.GT(yypos, yypos + 2));
+<INITIAL> "<=" => (Tokens.LE(yypos, yypos + 2));
+<INITIAL> "<" => (Tokens.LT(yypos, yypos + 2));
+<INITIAL> "!=" => (Tokens.NEQ(yypos, yypos + 2));
+<INITIAL> "=" => (Tokens.EQ(yypos, yypos + 1));
+<INITIAL> "/" => (Tokens.DIVIDE(yypos, yypos + 1));
+<INITIAL> "*" => (Tokens.TIMES(yypos, yypos + 1));
+<INITIAL> "-" => (Tokens.MINUS(yypos, yypos + 1));
+<INITIAL> "+" => (Tokens.PLUS(yypos, yypos + 1));
+<INITIAL> "." => (Tokens.DOT(yypos, yypos + 1));
+<INITIAL> "type" => (Tokens.TYPE(yypos, yypos + 4));
 bbb => (Tokens.ID("\"", yypos, yypos+1));
 \"([^\\"]|\\([nt"]|\^.|[0-9]{3}|[\t\n\ ]*\\))*\" => (let val text = String.translate(fn ch =>
 						     case ch of
