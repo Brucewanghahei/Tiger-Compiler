@@ -30,6 +30,8 @@ fun eof() =
 %s INVALID COMMENT STRING STRESCAPE;
 newline = \n;
 whitespace = [\t\ ]+;
+letter = [A-Za-z];
+digit = [0-9];
 %%
 <INVALID> . => (err (yypos, "invalid state " ^ yytext); continue());
 <INITIAL> {whitespace} => (continue());
@@ -86,4 +88,5 @@ whitespace = [\t\ ]+;
 <STRING> [^\n\r] => (stringAppBuffer(yytext); continue());
 <STRESCAPE> n|t|"^"[A-Za-z]|[0-9]{3}|\\|[\"] => (YYBEGIN STRING; stringAppBuffer("\\" ^ yytext); continue());
 <STRESCAPE> [\000-\037]+\\ => (YYBEGIN STRING; continue());
+<INITIAL> {letter}({letter}|{digit}|_)* => (Tokens.ID(yytext, yypos, yypos + size yytext));
 . => (YYBEGIN INITIAL; err (yypos, ("illegal character " ^ yytext)); continue());
