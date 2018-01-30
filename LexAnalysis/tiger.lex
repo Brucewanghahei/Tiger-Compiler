@@ -29,9 +29,11 @@ fun eof() =
 %% 
 %s INVALID COMMENT STRING STRESCAPE;
 newline = \n;
+whitespace = [\t\ ]+;
 %%
-<INVALID> . => (err (yypos, "invalid state"); continue());
-{newline}	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
+<INVALID> . => (err (yypos, "invalid state " ^ yytext); continue());
+<INITIAL> {whitespace} => (continue());
+<INITIAL, COMMMENT> {newline}	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
 <INITIAL> "/*" => (YYBEGIN COMMENT; commentIncLevel(); continue());
 <COMMENT> "/*" => (commentIncLevel(); continue());
 <COMMENT> "*/" => (commentDecLevel(); if !commentLevel = 0 then YYBEGIN INITIAL else (); continue());
@@ -78,11 +80,10 @@ newline = \n;
 <INITIAL> "+" => (Tokens.PLUS(yypos, yypos + 1));
 <INITIAL> "." => (Tokens.DOT(yypos, yypos + 1));
 <INITIAL> "type" => (Tokens.TYPE(yypos, yypos + 4));
-<INITIAL> \" => (YYBEGIN STRING; stringEmpBuffer(yypos); continue());
+<INITIAL> [\"] => (YYBEGIN STRING; stringEmpBuffer(yypos); continue());
 <STRING> \\ => (YYBEGIN STRESCAPE; continue());
+<STRING> [\"] => (YYBEGIN INITIAL; Tokens.STRING(stringBldBuffer(), !stringBegin, yypos+1));
+<STRING> [^\n\r] => (stringAppBuffer(yytext); continue());
 <STRESCAPE> n|t|"^"[A-Za-z]|[0-9]{3}|\\|[\"] => (YYBEGIN STRING; stringAppBuffer("\\" ^ yytext); continue());
 <STRESCAPE> [\000-\037]+\\ => (YYBEGIN STRING; continue());
-<STRESCAPE> . => (YYBEGIN INVALID; continue());
-<STRING> \" => (YYBEGIN INITIAL; Tokens.STRING(stringBldBuffer(), !stringBegin, yypos+1));
-<STRING> . => (stringAppBuffer(yytext); continue());
-. => (err (yypos, ("illegal character " ^ yytext)); continue());
+. => (YYBEGIN INITIAL; err (yypos, ("illegal character " ^ yytext)); continue());
