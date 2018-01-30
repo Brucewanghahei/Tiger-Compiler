@@ -30,6 +30,7 @@ fun eof() =
 %s INVALID COMMENT STRING STRESCAPE;
 newline = \n;
 whitespace = [\t\ ]+;
+digit = [0-9];
 %%
 <INVALID> . => (err (yypos, "invalid state " ^ yytext); continue());
 <INITIAL> {whitespace} => (continue());
@@ -80,6 +81,7 @@ whitespace = [\t\ ]+;
 <INITIAL> "+" => (Tokens.PLUS(yypos, yypos + 1));
 <INITIAL> "." => (Tokens.DOT(yypos, yypos + 1));
 <INITIAL> "type" => (Tokens.TYPE(yypos, yypos + 4));
+<INITIAL> {digit}+ => (Tokens.INT(valOf(Int.fromString(yytext)), yypos, yypos + size(yytext))));
 <INITIAL> [\"] => (YYBEGIN STRING; stringEmpBuffer(yypos); continue());
 <STRING> \\ => (YYBEGIN STRESCAPE; continue());
 <STRING> [\"] => (YYBEGIN INITIAL; Tokens.STRING(stringBldBuffer(), !stringBegin, yypos+1));
