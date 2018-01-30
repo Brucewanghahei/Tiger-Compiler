@@ -9,6 +9,12 @@ val commentLevel = ref 0
 fun commentIncLevel() = commentLevel := !commentLevel + 1
 fun commentDecLevel() = commentLevel := !commentLevel - 1
 
+val stringBuffer = ref [""]
+val stringBegin = ref 0
+fun stringEmpBuffer curP = let val () = stringBuffer := [""] val () = stringBegin := curP in () end
+fun stringAppBuffer (str:string) = stringBuffer := str :: !stringBuffer
+fun stringBldBuffer () = String.concat(List.revAppend(!stringBuffer, [""]))
+
 fun eof() =
     let
         val pos = hd(!linePos)
@@ -21,11 +27,11 @@ fun eof() =
     end
 
 %% 
-%s INVALID COMMENT;
+%s INVALID COMMENT STRING STRESCAPE;
 newline = \n;
 %%
 <INVALID> . => (err (yypos, "invalid state"); continue());
-<INITIAL, COMMEMT> newline	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
+{newline}	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
 <INITIAL> "/*" => (YYBEGIN COMMENT; commentIncLevel(); continue());
 <COMMENT> "/*" => (commentIncLevel(); continue());
 <COMMENT> "*/" => (commentDecLevel(); if !commentLevel = 0 then YYBEGIN INITIAL else (); continue());
@@ -72,12 +78,11 @@ newline = \n;
 <INITIAL> "+" => (Tokens.PLUS(yypos, yypos + 1));
 <INITIAL> "." => (Tokens.DOT(yypos, yypos + 1));
 <INITIAL> "type" => (Tokens.TYPE(yypos, yypos + 4));
-bbb => (Tokens.ID("\"", yypos, yypos+1));
-\"([^\\"]|\\([nt"]|\^.|[0-9]{3}|[\t\n\ ]*\\))*\" => (let val text = String.translate(fn ch =>
-						     case ch of
-										 (#"\n" | #"\t" | #" ") => "" 
-										 |  _ => String.str(ch)
-						     ) yytext;
-						     in Tokens.STRING(text, yypos, yypos + 2) end);
+<INITIAL> \" => (YYBEGIN STRING; stringEmpBuffer(yypos); continue());
+<STRING> \\ => (YYBEGIN STRESCAPE; continue());
+<STRESCAPE> n|t|"^"[A-Za-z]|[0-9]{3}|\\|[\"] => (YYBEGIN STRING; stringAppBuffer("\\" ^ yytext); continue());
+<STRESCAPE> [\000-\037]+\\ => (YYBEGIN STRING; continue());
+<STRESCAPE> . => (YYBEGIN INVALID; continue());
+<STRING> \" => (YYBEGIN INITIAL; Tokens.STRING(stringBldBuffer(), !stringBegin, yypos+1));
+<STRING> . => (stringAppBuffer(yytext); continue());
 . => (err (yypos, ("illegal character " ^ yytext)); continue());
-
