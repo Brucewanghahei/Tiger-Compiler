@@ -37,9 +37,8 @@ letter = [A-Za-z];
 digit = [0-9];
 %%
 <INITIAL> {whitespace} => (continue());
-<INITIAL, COMMMENT> {newline}	=> (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
-<INITIAL> "/*" => (YYBEGIN COMMENT; commentIncLevel(); continue());
-<COMMENT> "/*" => (commentIncLevel(); continue());
+<INITIAL, COMMENT> {newline} => (lineNum := !lineNum+1; linePos := yypos :: !linePos; continue());
+<INITIAL, COMMENT> "/*" => (YYBEGIN COMMENT; commentIncLevel(); continue());
 <COMMENT> "*/" => (commentDecLevel(); if !commentLevel = 0 then YYBEGIN INITIAL else (); continue());
 <COMMENT> . => (continue());
 <INITIAL> ":=" => (Tokens.ASSIGN(yypos, yypos + size yytext));
