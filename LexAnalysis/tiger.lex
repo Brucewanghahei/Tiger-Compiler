@@ -11,9 +11,10 @@ fun commentDecLevel() = commentLevel := !commentLevel - 1
 
 val stringBuffer = ref [""]
 val stringBegin = ref 0
-fun stringEmpBuffer curP = let val () = stringBuffer := [""] val () = stringBegin := curP in () end
+val stringFlag = ref false
+fun stringEmpBuffer curP = let val () = stringBuffer := [""] val () = stringBegin := curP val () = stringFlag := true in () end
 fun stringAppBuffer (str:string) = stringBuffer := str :: !stringBuffer
-fun stringBldBuffer () = String.concat(List.revAppend(!stringBuffer, [""]))
+fun stringBldBuffer () = let val () = stringFlag := false in String.concat(List.revAppend(!stringBuffer, [""])) end
 
 fun eof() =
     let
