@@ -18,12 +18,14 @@ fun stringBldBuffer () = let val () = stringFlag := false in String.concat(List.
 
 fun eof() =
     let
-        val pos = hd(!linePos)
-    in
-        if !commentLevel <> 0 then
-            err(pos, "unclosed comment")
-        else
+	val pos = hd(!linePos)
+	val () = if !commentLevel <> 0 then
+	    err(pos, "unclosed comment")
+	else if !stringFlag = true then
+	    err(pos, "unclosed string")
+	else
             ();
+    in
         Tokens.EOF(pos,pos)
     end
 
@@ -81,7 +83,7 @@ digit = [0-9];
 <INITIAL> then => (Tokens.THEN(yypos, yypos + size yytext));
 <INITIAL> if => (Tokens.IF(yypos, yypos + size yytext));
 <INITIAL> type => (Tokens.TYPE(yypos, yypos + size yytext));
-<INITIAL> {digit}+ => (Tokens.INT(valOf(Int.fromString(yytext)), yypos, yypos + size(yytext))));
+<INITIAL> {digit}+ => (Tokens.INT(valOf(Int.fromString(yytext)), yypos, yypos + size(yytext)));
 <INITIAL> [\"] => (YYBEGIN STRING; stringEmpBuffer(yypos); continue());
 <STRING> \\ => (YYBEGIN STRESCAPE; continue());
 <STRING> [\"] => (YYBEGIN INITIAL; Tokens.STRING(stringBldBuffer(), !stringBegin, yypos+1));
