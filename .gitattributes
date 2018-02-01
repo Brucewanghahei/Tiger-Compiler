@@ -1,0 +1,5 @@
+.gitattributes export-ignore
+.gitignore export-ignore
+
+testcases export-ignore
+tiger export-ignore
