@@ -16,7 +16,8 @@ All whitespaces at INITIAL state will be ignored. ALL newlines at INITIAL or COM
 
 We give comment the highest priority. The next is symbols, after that is reserved identifiers, then ints, strings, normal identifers. All characters that cannot be captured by these rules will be treated as illegal character and reported to the terminal.
 
-# String (Maybe we can earn one extra credit on string builder?)
+# Tokens & Rules
+## String (Maybe we can earn one extra credit on string builder?)
 
 Two rules for the string need to be stated:
 
@@ -28,3 +29,7 @@ One mechanism of the string builder needs to be stated:
 1. To improve the efficiency of building the string, we maintained a list of string chunks during lexicalizing the string. So instead of concatenating the string one by one, we join them at the end. The time complexity is O(n) instead of O(n^2). The implementation details are listed at the beginning of the tiger.lex file. stringEmpBuffer is to clear the string buffer and record the beginnig position of the string. stringAppBuffer is to append the string chunck to the beginning of the string buffer. stringBldBuffer is to build the string from the string buffer.
 
 2. Also we add a detection to the unclosed string. 
+
+## Comment
+According to the specification, nested comments are supported in tiger. A `commentLevel` variable is maintained for recognizing the closed comment blocks.
+When encountering a "/\*" in `INITIAL` state, the state transits to `COMMENT` and the `commentLevel` is incremented by 1. In `COMMENT` state, `commentLevel` is incremented by 1 when encountering a "/\*" and decremented by 1 when encountering a "\*/". If `commentLevel` becomes `0` in `COMMENT` state, the state transits back to `INITIAL` state.
