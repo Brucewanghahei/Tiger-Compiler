@@ -1,4 +1,4 @@
 .cm/
-*.lex.sml
 \#*\#
 *.zip
+LexAnalysis/tiger.lex.sml 
