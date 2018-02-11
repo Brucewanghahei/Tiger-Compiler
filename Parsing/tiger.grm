@@ -1,3 +1,5 @@
+structure A = Absyn
+
 %%
 %term
     EOF 
@@ -12,7 +14,7 @@
   | FUNCTION | VAR | TYPE 
   | UMINUS
 
-%nonterm  exp | program | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | param_list | param_list_list
+%nonterm  exp | program of A.exp | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | param_list | param_list_list
      
 %pos int
 %verbose
@@ -81,6 +83,7 @@ exp:
     (* func_call_exp *)
     | ID LPAREN param_list RPAREN ()
     | LBRACE expseq RBRACE ()
+    | NIL (A.Nilexp)
 	    
 expseq : exp expseq_list ()
        | ()
