@@ -12,7 +12,7 @@
   | FUNCTION | VAR | TYPE 
   | UMINUS
 
-%nonterm  exp | program | let_exp | break_exp | for_exp | while_exp | if_then_exp | if_then_else_exp | assign_exp | array_exp | record_exp | comp_exp | arith_exp | func_call_exp | negation_exp | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | type_id | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | func_id | param_list | param_list_list
+%nonterm  exp | program | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | param_list | param_list_list
      
 %pos int
 %verbose
@@ -39,7 +39,7 @@
 %left AND
 %left OR
 %nonassoc EQ NEQ LT LE GT GE
-%left PLUS MINUS 
+%left PLUS MINUS
 %left TIMES DIVIDE
 %nonassoc UMINUS
 
@@ -61,12 +61,10 @@ exp:
     | IF exp THEN exp ELSE exp ()
     (* assign_exp *)
     | lvalue ASSIGN exp ()
-    | array_exp ()
     (* array_exp *)
-    | type_id LBRACK exp RBRACK OF exp ()
+    | ID LBRACK exp RBRACK OF exp ()
     (* record_exp *)
-    | type_id LBRACE record_fields RBRACE ()
-    | record_exp ()
+    | ID LBRACE record_fields RBRACE ()
     (* comp_exp : exp cop exp () *)
     | exp EQ exp ()
     | exp NEQ exp ()
@@ -81,7 +79,7 @@ exp:
     | exp DIVIDE exp ()
     | MINUS exp %prec UMINUS ()
     (* func_call_exp *)
-    | func_id LPAREN param_list RPAREN ()
+    | ID LPAREN param_list RPAREN ()
     | LBRACE expseq RBRACE ()
 	    
 expseq : exp expseq_list ()
@@ -94,21 +92,20 @@ decs : dec decs ()
 dec : tydec ()
     | vardec ()
     | fundec ()
-tydec : TYPE type_id EQ ty ()
-ty : type_id ()
+tydec : TYPE ID EQ ty ()
+ty : ID ()
    | record_ty ()
    | array_ty ()
 record_ty : LBRACE tyfields RBRACE ()
-tyfields : ID COLON type_id tyfields_list ()
+tyfields : ID COLON ID tyfields_list ()
 	 | ()
 tyfields_list : COMMA tyfields ()
 	  | ()
-array_ty : ARRAY OF type_id ()
-type_id : ID ()
+array_ty : ARRAY OF ID ()
 vardec : VAR ID ASSIGN exp ()
-       | VAR ID COLON type_id ASSIGN exp ()
+       | VAR ID COLON ID ASSIGN exp ()
 fundec : FUNCTION ID LPAREN tyfields RPAREN EQ exp ()
-       | FUNCTION ID LPAREN tyfields RPAREN COLON type_id EQ exp ()
+       | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()
 
 lvalue : ID lvalue_list ()
 lvalue_list : DOT ID lvalue_list ()
@@ -119,7 +116,6 @@ record_fields : ID EQ exp record_fields_list ()
 record_fields_list : COMMA record_fields ()
 		   | ()
 
-func_id : ID ()
 param_list : exp param_list_list ()
 param_list_list : COMMA param_list ()
 		| ()
