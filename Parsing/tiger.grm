@@ -10,6 +10,7 @@
   | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
+  | UMINUS
 
 %nonterm  exp | program | let_exp | break_exp | for_exp | while_exp | if_then_exp | if_then_else_exp | assign_exp | array_exp | record_exp | comp_exp | arith_exp | func_call_exp | negation_exp | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | type_id | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | func_id | param_list | param_list_list
      
@@ -30,6 +31,16 @@
 %value INT (1)
 %value STRING ("")
 
+(* here goes the precedence *)
+%nonassoc IF
+%nonassoc ELSE
+%nonassoc ASSIGN
+%left AND
+%left OR
+%nonassoc EQ NEQ LT LE GT GE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%nonassoc UMINUS
 
 %%
 
@@ -119,7 +130,7 @@ param_list : exp param_list_list ()
 param_list_list : COMMA param_list ()
 		| ()
 
-negation_exp : MINUS exp ()
+negation_exp : MINUS exp %prec UMINUS ()
 
 	   
 			   
