@@ -1,4 +1,15 @@
 structure A = Absyn
+type symbol = A.symbol
+
+datatype lvalueVar_t = Field of symbol
+                     | Subscript of A.exp
+
+fun buildLvalueVar(v, lst, pos) =
+    case lst of
+        hd::tl => (case hd of
+                       Field(symbl) => buildLvalueVar(A.FieldVar(v, symbl, pos), tl, pos)
+                     | Subscript(exp) => buildLvalueVar(A.SubscriptVar(v, exp, pos), tl, pos))
+      | nil => v
 
 %%
 %term
@@ -34,12 +45,11 @@ structure A = Absyn
 %value STRING ("")
 
 (* here goes the precedence *)
-%nonassoc DO OF THEN
+%nonassoc DO OF THEN ASSIGN
 %nonassoc IF
 %nonassoc ELSE
-%nonassoc ASSIGN
-%left AND
 %left OR
+%left AND
 %nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left TIMES DIVIDE
@@ -50,19 +60,19 @@ structure A = Absyn
 program	: exp				()
 exp:
     (* let_exp *)
-    LET decs IN expseq END ()
+    LET decs IN expseq END (A.LetExp {decs = decs, body = A.SeqExp expseq, pos = LETleft})
     (* break_exp *)
-    | BREAK ()
+    | BREAK (A.BreakExp BREAKleft)
     (* for_exp *)
-    | FOR ID ASSIGN exp TO exp DO exp ()
+    | FOR ID ASSIGN exp TO exp DO exp (A.ForExp {var = symbol ID, escape = ref false, lo = exp1, hi = exp2, body = exp3, pos = FORleft})
     (* while_exp *)
-    | WHILE exp DO exp ()
+    | WHILE exp DO exp (A.WhileExp {test = exp1, body = exp2, pos = WHILEleft})
     (* if_then_exp *)
-    | IF exp THEN exp ()
+    | IF exp THEN exp (A.IfExp {test = exp1, then' = exp2, else' = A.NilExp, pos = IFleft})
     (* if_then_else_exp *)
-    | IF exp THEN exp ELSE exp ()
+    | IF exp THEN exp ELSE exp (A.IfExp {test = exp1, then' = exp2, else' = exp3, pos = IFleft})
     (* assign_exp *)
-    | lvalue ASSIGN exp ()
+    | lvalue ASSIGN exp (A.AssignExp {var = lvalue, exp = exp, pos = lvalueleft})
     (* array_exp *)
     | ID LBRACK exp RBRACK OF exp ()
     (* record_exp *)
@@ -83,7 +93,7 @@ exp:
     (* func_call_exp *)
     | ID LPAREN param_list RPAREN ()
     | LBRACE expseq RBRACE ()
-    | NIL (A.Nilexp)
+    | NIL (A.NilExp)
 	    
 expseq : exp expseq_list ()
        | ()
