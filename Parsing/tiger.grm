@@ -11,8 +11,8 @@
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
 
-%nonterm  exp | program
-
+%nonterm  exp | program | let_exp | break_exp | for_exp | while_exp | if_then_exp | if_then_else_exp | assign_exp | array_exp | record_exp | comp_exp | arith_exp | func_call_exp | negation_exp | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | type_id | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | func_id | param_list | param_list_list
+     
 %pos int
 %verbose
 %start program
@@ -30,9 +30,96 @@
 %value INT (1)
 %value STRING ("")
 
+
 %%
 
 program	: exp				()
+exp: let_exp 			()
+   | break_exp ()
+   | for_exp ()
+   | while_exp ()
+   | if_then_exp ()
+   | if_then_else_exp ()
+   | assign_exp ()
+   | array_exp ()
+   | record_exp ()
+   | comp_exp ()
+   | arith_exp()
+   | func_call_exp ()
+   | negation_exp()
+   | LBRACE expseq RBRACE ()
+	    
+expseq : exp expseq_list ()
+       | ()
+expseq_list : SEMICOLON expseq ()
+	    | ()
+	      
+let_exp : LET decs IN expseq END ()  
+decs : dec decs ()
+     | ()
+dec : tydec ()
+    | vardec ()
+    | fundec ()
+tydec : TYPE type_id EQ ty ()
+ty : type_id ()
+   | record_ty ()
+   | array_ty ()
+record_ty : LBRACE tyfields RBRACE ()
+tyfields : ID COLON type_id tyfields_list ()
+	 | ()
+tyfields_list : COMMA tyfields ()
+	  | ()
+array_ty : ARRAY OF type_id ()
+type_id : ID ()
+vardec : VAR ID ASSIGN exp ()
+       | VAR ID COLON type_id ASSIGN exp ()
+fundec : FUNCTION ID LPAREN tyfields RPAREN EQ exp ()
+       | FUNCTION ID LPAREN tyfields RPAREN COLON type_id EQ exp ()
 
-	
-exp: 			()
+break_exp : BREAK ()
+
+for_exp : FOR ID ASSIGN exp TO exp DO exp ()
+
+while_exp : WHILE exp DO exp ()
+
+if_then_exp : IF exp THEN exp ()
+
+if_then_else_exp : IF exp THEN exp ELSE exp ()
+
+assign_exp : lvalue ASSIGN exp ()
+lvalue : ID lvalue_list ()
+lvalue_list : DOT ID lvalue_list ()
+	| LBRACK exp RBRACK lvalue_list ()
+	| ()
+
+array_exp : type_id LBRACK exp RBRACK OF exp ()
+
+record_exp : type_id LBRACE record_fields RBRACE ()
+record_fields : ID EQ exp record_fields_list ()
+record_fields_list : COMMA record_fields ()
+		   | ()
+
+comp_exp : exp cop exp ()
+cop : EQ ()
+    | NEQ ()
+    | LT ()
+    | GT ()
+    | LE ()
+    | GE ()
+
+arith_exp : exp aop exp ()
+aop : PLUS ()
+    | MINUS ()
+    | TIMES ()
+    | DIVIDE ()
+
+func_call_exp : func_id LPAREN param_list RPAREN ()
+func_id : ID ()
+param_list : exp param_list_list ()
+param_list_list : COMMA param_list ()
+		| ()
+
+negation_exp : MINUS exp ()
+
+	   
+			   
