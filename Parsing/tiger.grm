@@ -11,6 +11,9 @@ fun buildLvalueVar(v, lst, pos) =
                      | Subscript(exp) => buildLvalueVar(A.SubscriptVar(v, exp, pos), tl, pos))
       | nil => v
 
+fun buildBinOpExp(lhs, op, rhs, pos) =
+    A.OpExp {left = lhs, oper = op, right = rhs, pos = pos}
+
 %%
 %term
     EOF 
@@ -74,22 +77,22 @@ exp:
     (* assign_exp *)
     | lvalue ASSIGN exp (A.AssignExp {var = lvalue, exp = exp, pos = lvalueleft})
     (* array_exp *)
-    | ID LBRACK exp RBRACK OF exp ()
+    | ID LBRACK exp RBRACK OF exp (A.ArrayExp {typ = symbol ID, size = exp1, init = exp2, pos = IDleft})
     (* record_exp *)
-    | ID LBRACE record_fields RBRACE ()
+    | ID LBRACE record_fields RBRACE (A.RecordExp {fields = record_fields, typ = symbol ID, pos = IDleft})
     (* comp_exp : exp cop exp () *)
-    | exp EQ exp ()
-    | exp NEQ exp ()
-    | exp LT exp ()
-    | exp GT exp ()
-    | exp LE exp ()
-    | exp GE exp ()
+    | exp EQ exp (buildBinOpExp(exp1, A.EqOp, exp2, exp1left))
+    | exp NEQ exp (buildBinOpExp(exp1, A.NeqOp, exp2, exp1left))
+    | exp LT exp (buildBinOpExp(exp1, A.LtOp, exp2, exp1left))
+    | exp GT exp (buildBinOpExp(exp1, A.GtOp, exp2, exp1left))
+    | exp LE exp (buildBinOpExp(exp1, A.LeOp, exp2, exp1left))
+    | exp GE exp (buildBinOpExp(exp1, A.GeOp, exp2, exp1left))
     (* arith_exp : exp aop exp () *)
-    | exp PLUS exp ()
-    | exp MINUS exp ()
-    | exp TIMES exp ()
-    | exp DIVIDE exp ()
-    | MINUS exp %prec UMINUS ()
+    | exp PLUS exp (buildBinOpExp(exp1, A.PlusOp, exp2, exp1left))
+    | exp MINUS exp (buildBinOpExp(exp1, A.MinusOp, exp2, exp1left))
+    | exp TIMES exp (buildBinOpExp(exp1, A.TimesOp, exp2, exp1left))
+    | exp DIVIDE exp (buildBinOpExp(exp1, A.DivideOp, exp2, exp1left))
+    | MINUS exp %prec UMINUS (buildBinOpExp(A.IntExp 0, A.MinusOp, exp, MINUSleft))
     (* func_call_exp *)
     | ID LPAREN param_list RPAREN ()
     | LBRACE expseq RBRACE ()
