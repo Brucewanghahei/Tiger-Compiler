@@ -83,7 +83,7 @@ fun buildFunDec(name, params, result, body, pos) =
 
 (* here goes the precedence *)
 %nonassoc LOWESTPREC
-%nonassoc DO OF THEN ASSIGN
+%nonassoc DO OF THEN ASSIGN FUNCTION TYPE
 %nonassoc IF
 %nonassoc ELSE
 %left OR
