@@ -14,6 +14,18 @@ fun buildLvalueVar(v, lst, pos) =
 fun buildBinOpExp(lhs, op, rhs, pos) =
     A.OpExp {left = lhs, oper = op, right = rhs, pos = pos}
 
+fun buildIfExp(test, thenExp, elseExp, pos) =
+    A.IfExp(test = test, then' = thenExp, else' = elseExp, pos = pos)
+
+fun buildTypeField(name, typ, pos) =
+    A.field {name = name, escape = ref false, typ = typ, pos = pos}
+
+fun buildVarDec(name, escapse, typ, init, pos) =
+    A.VarDec {name = name, escape = escape, typ = typ, init = init, pos = pos}
+
+fun buildFunDec(name, params, result, body, pos) =
+    A.fundec {name = name, params = params, result = result, body = body, pos = pos}
+
 %%
 %term
     EOF 
@@ -71,9 +83,9 @@ exp:
     (* while_exp *)
     | WHILE exp DO exp (A.WhileExp {test = exp1, body = exp2, pos = WHILEleft})
     (* if_then_exp *)
-    | IF exp THEN exp (A.IfExp {test = exp1, then' = exp2, else' = A.NilExp, pos = IFleft})
+    | IF exp THEN exp (buildIfExp(exp1, exp2, NONE, IFleft))
     (* if_then_else_exp *)
-    | IF exp THEN exp ELSE exp (A.IfExp {test = exp1, then' = exp2, else' = exp3, pos = IFleft})
+    | IF exp THEN exp ELSE exp (buildIfExp(exp1, exp2, SOME exp3, IFleft))
     (* assign_exp *)
     | lvalue ASSIGN exp (A.AssignExp {var = lvalue, exp = exp, pos = lvalueleft})
     (* array_exp *)
@@ -87,6 +99,9 @@ exp:
     | exp GT exp (buildBinOpExp(exp1, A.GtOp, exp2, exp1left))
     | exp LE exp (buildBinOpExp(exp1, A.LeOp, exp2, exp1left))
     | exp GE exp (buildBinOpExp(exp1, A.GeOp, exp2, exp1left))
+    (* logic_exp: exp lop exp *)
+    | exp AND exp (buildIfExp(exp1, exp2, SOME 0, exp1left))
+    | exp OR exp (buildIfExp(exp1, SOME 1, exp2, exp1left))
     (* arith_exp : exp aop exp () *)
     | exp PLUS exp (buildBinOpExp(exp1, A.PlusOp, exp2, exp1left))
     | exp MINUS exp (buildBinOpExp(exp1, A.MinusOp, exp2, exp1left))
@@ -103,25 +118,25 @@ expseq : exp expseq_list ([(exp, expleft)] @ expseq_list)
 expseq_list : SEMICOLON exp expseq_list ([(exp, SEMICOLONleft)] @ expseq_list)
 	    | (nil)
 	      
-decs : dec decs ()
-     | ()
-dec : tydec ()
-    | vardec ()
-    | fundec ()
-tydec : TYPE ID EQ ty ()
-ty : ID ()
-   | record_ty ()
-   | array_ty ()
-record_ty : LBRACE tyfields RBRACE ()
-tyfields : ID COLON ID tyfields_list ()
-	 | ()
-tyfields_list : COMMA tyfields ()
-	  | ()
-array_ty : ARRAY OF ID ()
-vardec : VAR ID ASSIGN exp ()
-       | VAR ID COLON ID ASSIGN exp ()
-fundec : FUNCTION ID LPAREN tyfields RPAREN EQ exp ()
-       | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()
+decs : dec decs ([dec] @ decs)
+     | (nil)
+dec : tydec (A.TypeDec tydec)
+    | vardec (vardec)
+    | fundec (A.FunctionDec fundec)
+tydec : TYPE ID EQ ty ({name = sylbol ID, ty = ty, pos = TYPEleft})
+ty : ID (A.NameTy(symbol ID, IDleft))
+   | record_ty (A.RecordTy record_ty)
+   | array_ty (A.ArrayTy array_ty)
+record_ty : LBRACE tyfields RBRACE (tyfields)
+tyfields : ID COLON ID tyfields_list ([buildTypeField(ID1, ID2, IDleft1)] @ typefields_list)
+	 | (nil)
+tyfields_list : COMMA ID COLON ID tyfields_list ([buildTypeField(ID1, ID2, COMMAleft)] @ typefields_list)
+	  | (nil)
+array_ty : ARRAY OF ID ((symbol ID, ARRAYleft))
+vardec : VAR ID ASSIGN exp (buildVarDec(symbol ID, ref false, NONE, exp, VARleft))
+       | VAR ID COLON ID ASSIGN exp (buildVarDec(symbol ID1, ref false, SOME ID2, exp, VARleft))
+fundec : FUNCTION ID LPAREN tyfields RPAREN EQ exp (buildFunDec(symbol ID, tyfields, NONE, exp, FUNCTIONleft))
+       | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp (buildFunDec(symbol ID1, tyfields, SOME ID2, exp, FUNCTIONleft))
 
 lvalue : ID lvalue_list ()
 lvalue_list : DOT ID lvalue_list ()
