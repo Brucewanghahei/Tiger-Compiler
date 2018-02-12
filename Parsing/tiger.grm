@@ -1,7 +1,7 @@
 structure A = Absyn
-type symbol = A.symbol
+open Symbol
 
-datatype lvalueVar_t = Field of symbol
+datatype lvalueVar_t = Field of Symbol.symbol
                      | Subscript of A.exp
 
 fun buildLvalueVar(v, lst, pos) =
@@ -11,20 +11,17 @@ fun buildLvalueVar(v, lst, pos) =
                      | Subscript(exp) => buildLvalueVar(A.SubscriptVar(v, exp, pos), tl, pos))
       | nil => v
 
-fun buildBinOpExp(lhs, op, rhs, pos) =
-    A.OpExp {left = lhs, oper = op, right = rhs, pos = pos}
+fun buildBinOpExp(lhs, oper, rhs, pos) =
+    A.OpExp {left = lhs, oper = oper, right = rhs, pos = pos}
 
 fun buildIfExp(test, thenExp, elseExp, pos) =
-    A.IfExp(test = test, then' = thenExp, else' = elseExp, pos = pos)
+    A.IfExp {test = test, then' = thenExp, else' = elseExp, pos = pos}
 
-fun buildTypeField(name, typ, pos) =
-    A.field {name = name, escape = ref false, typ = typ, pos = pos}
-
-fun buildVarDec(name, escapse, typ, init, pos) =
-    A.VarDec {name = name, escape = escape, typ = typ, init = init, pos = pos}
+fun buildVarDec(name, typ, init, pos) =
+    A.VarDec {name = name, escape = ref false, typ = typ, init = init, pos = pos}
 
 fun buildFunDec(name, params, result, body, pos) =
-    A.fundec {name = name, params = params, result = result, body = body, pos = pos}
+    {name = name, params = params, result = result, body = body, pos = pos}
 
 %%
 %term
@@ -39,8 +36,33 @@ fun buildFunDec(name, params, result, body, pos) =
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
   | UMINUS
+  | LOWESTPREC | HIGHESTPREC
 
-%nonterm  exp | program of A.exp | expseq | expseq_list | decs | dec | tydec | ty | record_ty | tyfields | tyfields_list | array_ty | vardec | fundec | lvalue | lvalue_list | record_fields | record_fields_list | cop | aop | param_list | param_list_list
+%nonterm  exp of A.exp
+        | program of A.exp
+        | expseq of (A.exp * pos) list
+        | expseq_tail of (A.exp * pos) list
+        | decs of A.dec list
+        | dec of A.dec
+        | tydecs of {name: symbol, ty: A.ty, pos: pos} list
+        | tydec of {name: symbol, ty: A.ty, pos: pos}
+        | ty of A.ty
+        | record_ty of A.field list
+        | array_ty of (symbol * pos)
+        | tyfields of A.field list
+        | tyfield_tail of A.field list
+        | tyfield of A.field
+        | vardec of A.dec
+        | fundecs of A.fundec list
+        | fundec_tail of A.fundec list
+        | fundec of A.fundec
+        | lvalue of A.var
+        | lvalue_list of lvalueVar_t list
+        | record_fields of (symbol * A.exp * pos) list
+        | record_tail of (symbol * A.exp * pos) list
+        | record_field of (symbol * A.exp * pos)
+        | params of A.exp list
+        | param_tail of A.exp list
      
 %pos int
 %verbose
@@ -60,6 +82,7 @@ fun buildFunDec(name, params, result, body, pos) =
 %value STRING ("")
 
 (* here goes the precedence *)
+%nonassoc LOWESTPREC
 %nonassoc DO OF THEN ASSIGN
 %nonassoc IF
 %nonassoc ELSE
@@ -69,10 +92,11 @@ fun buildFunDec(name, params, result, body, pos) =
 %left PLUS MINUS
 %left TIMES DIVIDE
 %nonassoc UMINUS
+%nonassoc HIGHESTPREC
 
 %%
 
-program	: exp				()
+program	: exp				(exp)
 exp:
     (* let_exp *)
     LET decs IN expseq END (A.LetExp {decs = decs, body = A.SeqExp expseq, pos = LETleft})
@@ -100,8 +124,8 @@ exp:
     | exp LE exp (buildBinOpExp(exp1, A.LeOp, exp2, exp1left))
     | exp GE exp (buildBinOpExp(exp1, A.GeOp, exp2, exp1left))
     (* logic_exp: exp lop exp *)
-    | exp AND exp (buildIfExp(exp1, exp2, SOME 0, exp1left))
-    | exp OR exp (buildIfExp(exp1, SOME 1, exp2, exp1left))
+    | exp AND exp (buildIfExp(exp1, exp2, SOME (A.IntExp 0), exp1left))
+    | exp OR exp (buildIfExp(exp1, A.IntExp 1, SOME exp2, exp1left))
     (* arith_exp : exp aop exp () *)
     | exp PLUS exp (buildBinOpExp(exp1, A.PlusOp, exp2, exp1left))
     | exp MINUS exp (buildBinOpExp(exp1, A.MinusOp, exp2, exp1left))
@@ -109,44 +133,60 @@ exp:
     | exp DIVIDE exp (buildBinOpExp(exp1, A.DivideOp, exp2, exp1left))
     | MINUS exp %prec UMINUS (buildBinOpExp(A.IntExp 0, A.MinusOp, exp, MINUSleft))
     (* func_call_exp *)
-    | ID LPAREN param_list RPAREN (A.CallExp {func = symbol ID, args = param_list, pos = IDleft})
+    | ID LPAREN params RPAREN (A.CallExp {func = symbol ID, args = params,  pos = IDleft})
     | LPAREN expseq RPAREN (A.SeqExp expseq)
+    | INT (A.IntExp INT)
+    | STRING (A.StringExp(STRING, STRINGleft))
     | NIL (A.NilExp)
 	    
-expseq : exp expseq_list ([(exp, expleft)] @ expseq_list)
+expseq : exp expseq_tail ([(exp, expleft)] @ expseq_tail)
        | (nil)
-expseq_list : SEMICOLON exp expseq_list ([(exp, SEMICOLONleft)] @ expseq_list)
+expseq_tail : SEMICOLON exp expseq_tail ([(exp, expleft)] @ expseq_tail)
 	    | (nil)
 	      
 decs : dec decs ([dec] @ decs)
      | (nil)
-dec : tydec (A.TypeDec tydec)
+dec : tydecs %prec LOWESTPREC (A.TypeDec tydecs)
     | vardec (vardec)
-    | fundec (A.FunctionDec fundec)
-tydec : TYPE ID EQ ty ({name = sylbol ID, ty = ty, pos = TYPEleft})
+    | fundecs %prec LOWESTPREC (A.FunctionDec fundecs)
+             
+tydecs: tydec ([tydec])
+      | tydecs tydec %prec HIGHESTPREC (tydecs @ [tydec])
+tydec : TYPE ID EQ ty ({name = symbol ID, ty = ty, pos = TYPEleft})
+             
 ty : ID (A.NameTy(symbol ID, IDleft))
    | record_ty (A.RecordTy record_ty)
    | array_ty (A.ArrayTy array_ty)
+              
 record_ty : LBRACE tyfields RBRACE (tyfields)
-tyfields : ID COLON ID tyfields_list ([buildTypeField(ID1, ID2, IDleft1)] @ typefields_list)
-	 | (nil)
-tyfields_list : COMMA ID COLON ID tyfields_list ([buildTypeField(ID1, ID2, COMMAleft)] @ typefields_list)
-	  | (nil)
 array_ty : ARRAY OF ID ((symbol ID, ARRAYleft))
-vardec : VAR ID ASSIGN exp (buildVarDec(symbol ID, ref false, NONE, exp, VARleft))
-       | VAR ID COLON ID ASSIGN exp (buildVarDec(symbol ID1, ref false, SOME ID2, exp, VARleft))
+
+tyfields : tyfield tyfield_tail ([tyfield] @ tyfield_tail)
+	     | (nil)
+tyfield_tail : COMMA tyfield tyfield_tail ([tyfield] @ tyfield_tail)
+	  | (nil)
+tyfield: ID COLON ID ({name = symbol ID1, escape = ref false, typ = symbol ID2, pos = ID1left})
+                 
+vardec : VAR ID ASSIGN exp (buildVarDec(symbol ID, NONE, exp, VARleft))
+       | VAR ID COLON ID ASSIGN exp (buildVarDec(symbol ID1, SOME (symbol ID2, ID2left), exp, VARleft))
+
+fundecs: fundec ([fundec])
+       | fundecs fundec %prec HIGHESTPREC (fundecs @ [fundec])
 fundec : FUNCTION ID LPAREN tyfields RPAREN EQ exp (buildFunDec(symbol ID, tyfields, NONE, exp, FUNCTIONleft))
-       | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp (buildFunDec(symbol ID1, tyfields, SOME ID2, exp, FUNCTIONleft))
+       | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp (buildFunDec(symbol ID1, tyfields, SOME (symbol ID2, ID2left), exp, FUNCTIONleft))
 
-lvalue : ID lvalue_list ()
-lvalue_list : DOT ID lvalue_list ()
-	| LBRACK exp RBRACK lvalue_list ()
-	| ()
+lvalue : ID lvalue_list (buildLvalueVar(A.SimpleVar(symbol ID, IDleft), lvalue_list, IDleft))
+lvalue_list : DOT ID lvalue_list ([Field (symbol ID)] @ lvalue_list)
+	| LBRACK exp RBRACK lvalue_list ([Subscript exp] @ lvalue_list)
+	| (nil)
 
-record_fields : ID EQ exp record_fields_list ()
-record_fields_list : COMMA record_fields ()
-		   | ()
+record_fields: record_field record_tail ([record_field] @ record_tail)
+             | (nil)
+record_tail: COMMA record_field record_tail ([record_field] @ record_tail)
+		   | (nil)
+record_field: ID EQ exp ((symbol ID, exp, IDleft))
 
-param_list : exp param_list_list ()
-param_list_list : COMMA param_list ()
-		| ()
+params : exp param_tail ([exp] @ param_tail)
+       | (nil)
+param_tail : COMMA exp param_tail ([exp] @ param_tail)
+		| (nil)
