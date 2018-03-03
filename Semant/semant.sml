@@ -4,21 +4,29 @@ use "symbol.sml";
 use "absyn.sml";
 use "transalte.sml";
 
-structure Semant =
-struct
+signature SEMANT =
+sig
   
-  type venv = Env.enventry Symbol.table
-  type tenv = ty Symbol.table
-  type expty = {exp: Translate.exp, ty: Types.ty} 
+  type venv
+  type tenv
+  type expty
 
-  fun transVar(venv, tenv, var:Absyn.var) : expty = ()
+  val transVar : venv * tenv * Absyn.var -> expty
 
-  fun transExp(venv, tenv, exp:Absyn.exp) : expty = ()
+  val transExp : venv * tenv * Absyn.exp -> expty
 
-  fun transDec(venv, tenv, dec:Absyn.dec) : {venv: venv, tenv: tenv} = ()
+  val transDec : venv * tenv * Absyn.dec -> {venv: venv, tenv: tenv}
 
-  fun transTy(tenv, ty:Absyn.ty) : Types.ty
+  val transTy : tenv * Absyn.ty -> Types.ty
 
-  fun transProg(exp:Absyn.exp) : unit = ()
+  val transProg : Absyn.exp -> unit
+
+end
+
+structure Semant :> SEMANT =
+struct
+   type venv = Env.enventry Symbol.table
+   type tenv = ty Symbol.table
+   type expty = {exp: Translate.exp, ty: Types.ty}
 
 end
