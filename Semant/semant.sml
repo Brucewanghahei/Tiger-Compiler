@@ -105,13 +105,13 @@ struct
                                  | _ => err pos (msgTmpl ^ " - nil")
                     | T.RECORD =>
                       (* structural equal *)
-                      assertEq(ty, decTy,
-                               fn(lhs, rhs) => #1 lhs = #1 rhs,
+                      assertEq(#1 ty, #1 decTy,
+                               op =,
                                err pos, msgTmpl ^ " - record")
                     | T.ARRAY =>
                       (* structural equal *)
-                      assertEq(ty, decTy,
-                               fn(lhs, rhs) => #1 lhs = #1 rhs,
+                      assertEq(#1 ty, #1 decTy,
+                               op =,
                                err pos, msgTmpl ^ " - array")
                     | _ => assertEq(decTy, ty, op =, err pos, msgTmpl ^ (S.name s))
                 ;
