@@ -3,6 +3,7 @@ use "types.sml";
 use "symbol.sml";
 use "absyn.sml";
 use "transalte.sml";
+use "errormsg.sml";
 
 signature SEMANT =
 sig
@@ -26,8 +27,12 @@ end
 structure Semant :> SEMANT =
 struct
 
+  (* alias *)
+  structure Err = ErrorMsg
   structure A = Absyn
   structure Ty = Types
+  structure E = Env
+  structure S = Symbol
 
   type venv = Env.enventry Symbol.table
   type tenv = ty Symbol.table
