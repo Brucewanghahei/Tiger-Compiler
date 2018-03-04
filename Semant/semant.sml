@@ -33,6 +33,7 @@ struct
   structure Ty = Types
   structure E = Env
   structure S = Symbol
+  val err = Err.error
 
   type venv = Env.enventry Symbol.table
   type tenv = ty Symbol.table
