@@ -57,6 +57,15 @@ struct
         (checkInt(trexp left, pos);
          checkInt(trexp right, pos);
          {exp=(), ty=Ty.INT})
+      | trexp (A.IntExp int) =
+        {exp=(), ty=Ty.INT}
+      | trexp (A.LetExp {decs, body, pos}) =
+        let
+          val {venv=venv', tenv=tenv'} =
+          transDec(venv, tenv, decs)
+        in
+          transExp(venv', tenv', body)
+        end
         (* ... *)
     in
       trexp exp
