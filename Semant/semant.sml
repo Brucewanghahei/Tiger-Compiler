@@ -92,6 +92,12 @@ struct
            checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
          end;
          {exp = (), ty=Ty.UNIT})
+      | trexp (A.VarExp var) =
+        transVar(venv, tenv, var)
+      | trexp (A.NilExp) =
+        {exp=(), ty=Ty.NIL}
+      | trexp (A.StringExp) =
+        {exp=(), ty=Ty.STRING}        
         (* ... *)
     in
       trexp exp
