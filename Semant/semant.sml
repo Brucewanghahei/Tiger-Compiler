@@ -35,12 +35,9 @@ struct
   structure S = Symbol
   val err = Err.error
 
-  fun errWrapper pos msg =
-      fn () => err pos msg
-
-  fun assertEq (lhs: 'a, rhs: 'a, eqFun, errFun: unit -> unit) =
+  fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
       if eqFun(lhs, rhs) then
-          errFun()
+          errCurry msg
       else
           ()
 
