@@ -79,7 +79,8 @@ struct
         end
       | trexp (A.SeqExp seq) =
         case seq of
-             [(exp, pos)] => trexp(exp)
+             [] => err ~1 "two or more expression in seq requried"
+           | [(exp, pos)] => trexp(exp)
            | (exp, pos)::tail =>
                (trexp(exp);
                 trexp(tail);)
