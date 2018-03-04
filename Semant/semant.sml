@@ -132,6 +132,33 @@ struct
                     tenv = tenv
                   }
               end
+            | trdec (A.TypeDec(tydecs)) =
+              let
+                  (* first pass to scan headers*)
+                  fun trTyDecHeader (tenv, {name, ty, pos}::tl) =
+                      let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
+                      in
+                          trTyDecHeader(tenv', tl)
+                      end
+                    | trTyDecHeader (tenv, nil) =
+                      tenv
+                  (* second pass to fill body *)
+                  fun trTyDecBody (tenv, {name, ty, pos}::tl) =
+                      let val nameTy = transTy(tenv, ty)
+                      in
+                          case S.look(tenv, name) of
+                              (s, SOME nameTyRef) =>
+                              nameTyRef := nameTy
+                            | (s, NONE) =>
+                              err pos ("Type" ^ S.name name ^ "not found in header")
+                        ;
+                          trTyDecBody(tenv, tl)
+                      end
+                    | trTyDecBody (tenv, nil) = tenv
+                  val tenv' = trTyDecHeader(tenv, tydecs)
+              in
+                  trTyDecBody(tenv', tydecs)
+              end
       in
           trdec dec
       end
