@@ -59,6 +59,9 @@ struct
 
   fun checkInt ({exp, ty}, pos) = 
     assertEq (ty, Ty.INT, op =, err pos, "integer required";
+  
+  fun checkNoValue ({exp, ty}, pos) =
+    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required";
 
   fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
@@ -80,6 +83,15 @@ struct
            | (exp, pos)::tail =>
                (trexp(exp);
                 trexp(tail);)
+      | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
+        (checkInt(trexp lo, pos);
+         checkInt(trexp hi, pos);
+         let
+           venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+         in
+           checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
+         end;
+         {exp = (), ty=Ty.UNIT})
         (* ... *)
     in
       trexp exp
