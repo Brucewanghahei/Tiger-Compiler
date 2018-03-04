@@ -62,12 +62,18 @@ struct
   
   fun checkNoValue ({exp, ty}, pos) =
     assertEq (ty, Ty.UNIT, op =, err pos, "no-value required";
+    
+  fun checkFuncHead = () (* todo *)
+
+  fun checkFuncParams = () (* todo *)
 
   fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
-        (checkInt(trexp left, pos);
-         checkInt(trexp right, pos);
-         {exp=(), ty=Ty.INT})
+        (
+        checkInt(trexp left, pos);
+        checkInt(trexp right, pos);
+        {exp=(), ty=Ty.INT}
+        )
       | trexp (A.IntExp int) =
         {exp=(), ty=Ty.INT}
       | trexp (A.LetExp {decs, body, pos}) =
@@ -85,20 +91,33 @@ struct
                (trexp(exp);
                 trexp(tail);)
       | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
-        (checkInt(trexp lo, pos);
-         checkInt(trexp hi, pos);
-         let
-           venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
-         in
-           checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
-         end;
-         {exp = (), ty=Ty.UNIT})
+        (
+        checkInt(trexp lo, pos);
+        checkInt(trexp hi, pos);
+        let
+          venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+        in
+          checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
+        end;
+        {exp = (), ty=Ty.UNIT}
+        )
       | trexp (A.VarExp var) =
         transVar(venv, tenv, var)
       | trexp (A.NilExp) =
         {exp=(), ty=Ty.NIL}
       | trexp (A.StringExp) =
         {exp=(), ty=Ty.STRING}        
+      | trexp (A.CallExp {func, args, pos}) =
+        (
+        checkFuncHead(func);
+        let
+          val SOME(func_enventry) = S.look(venv, func)
+          val {formals=formals, result=result} = func_enventry
+          val () = checkFuncParams(formals, args)
+        in
+          {exp=(), ty=result}
+        end
+        )
         (* ... *)
     in
       trexp exp
