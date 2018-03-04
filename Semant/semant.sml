@@ -40,7 +40,7 @@ struct
 
   fun checkInt ({exp, ty}, pos) =
     case ty of Ty.INT => ()
-       | _ => error pos "integer required";
+       | _ => Err.error pos "integer required";
 
   fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
