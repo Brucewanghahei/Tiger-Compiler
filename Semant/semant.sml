@@ -118,7 +118,9 @@ struct
           {exp=(), ty=result}
         end
         )
-        (* ... *)
+      | trexp (A.ArrayExp {typ, size, init, pos}) =
+      	{exp=(), ty=Ty.UNIT}
+	(* ... *)
     in
       trexp exp
     end
