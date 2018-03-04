@@ -47,6 +47,8 @@ struct
         (checkInt(trexp left, pos);
          checkInt(trexp right, pos);
          {exp=(), ty=Ty.INT})
+      | trexp (A.IntExp int) =
+        {exp=(), ty=Ty.INT}
         (* ... *)
     in
       trexp exp
