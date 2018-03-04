@@ -35,6 +35,15 @@ struct
   structure S = Symbol
   val err = Err.error
 
+  fun errWrapper pos msg =
+      fn () => err pos msg
+
+  fun assertEq(eqFun: 'a * 'a -> bool , errFun: unit -> unit) =
+      if eqFun then
+          errFun()
+      else
+          ()
+
   type venv = Env.enventry Symbol.table
   type tenv = ty Symbol.table
   type expty = {exp: Translate.exp, ty: Types.ty}
