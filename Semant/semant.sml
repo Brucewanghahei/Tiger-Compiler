@@ -41,6 +41,18 @@ struct
       else
           ()
 
+  (* use T.NIL as dummy return value *)
+  fun lookActualType(tenv, symbol, pos) =
+      case S.look(tenv, symbol) of
+          SOME ty => actual_ty(ty, pos)
+        | NONE => (err pos ("Type " ^ s.name symbol ^ "not found"); T.NIL)
+
+  fun actual_ty(ty, pos) =
+      case ty of
+          T.NAME(s, ref(SOME(t))) => actual_ty(t, pos)
+        | T.NAME(s, ref(NONE)) => (err pos ("Type " ^ s.name s ^ "is NONE"); T.NIL)
+        | _ => ty
+
   type venv = Env.enventry Symbol.table
   type tenv = ty Symbol.table
   type expty = {exp: Translate.exp, ty: Types.ty}
@@ -75,25 +87,37 @@ struct
     end
 
   fun transDec (venv, tenv, dec) =
-      let fun trdec (A.VarDec{name, typ, init, pos}) =
+      let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
-                  case typ of
-                      SOME(decTy, pos) =>
-                      let val errFun = errWrapper pos "VarDec: type mismatched"
-                      in
-                          case ty of
-                              T.NIL => assertEq(decTy, T.RECORD)
-                          (* todo: how to use unique; handle symbol in T.NAME*)
-                           | T.RECORD(fields, unique) => 
-                           | T.ARRAY(eleTy, unique) =>
-                           | T.NAME(symbol, refTy) => 
-                           | _ => assertEq(decTy, ty, op =, errFun)
-                      end
-                    | NONE => ()
-                ;
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = ty}),
+                    tenv = tenv
+                  }
+              end
+            | trdec (A.VarDec{name, typ = SOME(s, _), init, pos}) = 
+              let val {exp, ty} = transExp(venv, tenv, init)
+                  val msgTmpl = "VarDec: type mismatched"
+                  val decTy = lookActualType(tenv, s, pos)
+              in
+                  case ty of
+                      T.NIL => case decTy of
+                                   T.RECORD => ()
+                                 | _ => err pos (msgTmpl ^ " - nil")
+                    | T.RECORD =>
+                      (* structural equal *)
+                      assertEq(ty, decTy,
+                               fn(lhs, rhs) => #1 lhs = #1 rhs,
+                               err pos, msgTmpl ^ " - record")
+                    | T.ARRAY =>
+                      (* structural equal *)
+                      assertEq(ty, decTy,
+                               fn(lhs, rhs) => #1 lhs = #1 rhs,
+                               err pos, msgTmpl ^ " - array")
+                    | _ => assertEq(decTy, ty, op =, err pos, msgTmpl ^ (S.name s))
+                ;
+                  {
+                    venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
                     tenv = tenv
                   }
               end
