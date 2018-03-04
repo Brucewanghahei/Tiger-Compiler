@@ -38,8 +38,8 @@ struct
   fun errWrapper pos msg =
       fn () => err pos msg
 
-  fun assertEq (eqFun: 'a * 'a -> bool , errFun: unit -> unit) =
-      if eqFun() then
+  fun assertEq (lhs: 'a, rhs: 'a, eqFun, errFun: unit -> unit) =
+      if eqFun(lhs, rhs) then
           errFun()
       else
           ()
@@ -85,7 +85,7 @@ struct
                            | T.RECORD(fields, unique) => 
                            | T.ARRAY(eleTy, unique) =>
                            | T.NAME(symbol, refTy) => 
-                           | _ => assertEq(op =, errFun)
+                           | _ => assertEq(decTy, ty, op =, errFun)
                       end
                     | NONE => ()
                 ;
