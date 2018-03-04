@@ -66,17 +66,24 @@ struct
       let fun trdec(A.VarDec{name, typ, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
-                  (case typ of
-                      SOME(symbol, pos) =>
-                              if typ <> ty then
-                                  err pos "VarDec: type mismatched"
-                              else ()
+                  case typ of
+                      SOME(decTy, pos) =>
+                      let val errFun = errWrapper pos "VarDec: type mismatched"
+                      in
+                          case ty of
+                              T.NIL => assertEq(decTy, T.RECORD)
+                          (* todo: how to use unique; handle symbol in T.NAME*)
+                           | T.RECORD(fields, unique) => 
+                           | T.ARRAY(eleTy, unique) =>
+                           | T.NAME(symbol, refTy) => 
+                           | _ => assertEq(op =, errFun)
+                      end
                     | NONE => ()
                 ;
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = ty}),
                     tenv = tenv
-                  })
+                  }
               end
       in
           trdec dec
