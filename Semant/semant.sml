@@ -37,13 +37,13 @@ struct
     case ty of Ty.INT => ()
        | _ => error pos "integer required";
 
-  fun transExp(venv, tenv) =
+  fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
         (checkInt(trexp left, pos);
          checkInt(trexp right, pos);
          {exp=(), ty=Ty.INT})
         (* ... *)
     in
-      trexp
+      trexp exp
     end
 end
