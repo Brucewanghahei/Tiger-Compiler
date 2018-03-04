@@ -12,6 +12,15 @@ struct
           | NAME of Symbol.symbol * ty option ref
           | UNIT
 
+  fun whatis(NAME (sym, ref(ty_opt))) =
+    (
+    case ty_opt of
+         SOME(ty) => whatis(ty)
+       | NONE => NONE
+    )
+  | whatis(other_ty) = SOME(other_ty)
+
+
   fun name
     (RECORD (symbol_ty_list, uni)) =
     let

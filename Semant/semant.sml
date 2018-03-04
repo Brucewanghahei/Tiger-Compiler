@@ -41,13 +41,30 @@ struct
       else
           ()
 
-  (* todo *)
   fun compareAnyType(lhs: Ty.ty, rhs: Ty.ty) =
-    ()
+    case (lhs, rhs) of
+         (Ty.NIL, Ty.NIL) => true
+       | (Ty.INT, Ty.INT) => true
+       | (Ty.STRING, Ty.STRING) => true
+       | (Ty.UNIT, Ty.UNIT) => true
+       | (Ty.RECORD(_, lhs_uni), Ty.RECORD(_, rhs_uni)) => lhs_uni = rhs_uni
+       | (Ty.ARRAY(_, lhs_uni), Ty.ARRAY(_, rhs_uni)) => lhs_uni = rhs_uni
+       | (Ty.NAME a, Ty.NAME b) =>
+           let
+             val lhs_ty_opt = whatis(lhs)
+             val rhs_ty_opt = whatis(rhs)
+           in
+             case (lhs_ty_opt, rhs_ty_opt) of
+                  (SOME(lhs_ty), SOME(rhs_ty)) => compareAnyType(lhs_ty, rhs_ty)
+                | (_, _) => false
+           end
+       | (_, _) => false 
 
-  (* todo *)
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
-    ()
+    if compareAnyType(lhs, rhs) then
+      errCurry msg
+    else
+      ()
 
   (* use T.NIL as dummy return value *)
   fun lookActualType(tenv, symbol, pos) =
@@ -81,11 +98,17 @@ struct
   fun checkFuncParams (formals: E.ty list, args: A.exp list, pos) = 
   let
     fun f (lhs_head::lhs_tail, rhs_head::rhs_tail) =
+        (
         assertTypeEq(lhs_head, rhs_head, err pos,
         "Parameter Mismatch:\n" ^ "function parameter: " ^ Ty.name lhs_head ^
-        "input parameter: " ^ Ty.name rhs_head) 
+        "input parameter: " ^ Ty.name rhs_head);
+        f (lhs_tail, rhs_tail)
+        )
       | f ([], []) = () 
       | f (_, _) = err pos "Parameter size mismatch"
+  in
+    f(formals, args)
+  end
 
   fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
