@@ -57,9 +57,8 @@ struct
   type tenv = ty Symbol.table
   type expty = {exp: Translate.exp, ty: Types.ty}
 
-  fun checkInt ({exp, ty}, pos) =
-    case ty of Ty.INT => ()
-       | _ => Err.error pos "integer required";
+  fun checkInt ({exp, ty}, pos) = 
+    assertEq (ty, Ty.INT, op =, err pos, "integer required";
 
   fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
