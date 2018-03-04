@@ -52,4 +52,24 @@ struct
     in
       trexp exp
     end
+
+  fun transDec(venv, tenv, dec) =
+      let fun trdec(A.VarDec{name, typ, init, pos}) =
+              let val {exp, ty} = transExp(venv, tenv, init)
+              in
+                  (case typ of
+                      SOME(symbol, pos) =>
+                              if typ <> ty then
+                                  err pos "VarDec: type mismatched"
+                              else ()
+                    | NONE => ()
+                ;
+                  {
+                    venv = S.enter(venv, name, E.VarEntry{ty = ty}),
+                    tenv = tenv
+                  })
+              end
+      in
+          trdec dec
+      end
 end
