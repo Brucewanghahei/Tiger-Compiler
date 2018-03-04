@@ -121,13 +121,16 @@ struct
                   }
               end
             | trdec (A.TypeDec(tydecs)) =
-              let fun trTyDecHeader (tenv, {name, ty, pos}::tl) =
+              let
+                  (* first pass to scan headers*)
+                  fun trTyDecHeader (tenv, {name, ty, pos}::tl) =
                       let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
                       in
                           trTyDecHeader(tenv', tl)
                       end
                     | trTyDecHeader (tenv, nil) =
                       tenv
+                  (* second pass to fill body *)
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
                       let val nameTy = transTy(tenv, ty)
                       in
