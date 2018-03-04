@@ -41,16 +41,24 @@ struct
       else
           ()
 
+  (* todo *)
+  fun compareAnyType(lhs: Ty.ty, rhs: Ty.ty) =
+    ()
+
+  (* todo *)
+  fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
+    ()
+
   (* use T.NIL as dummy return value *)
   fun lookActualType(tenv, symbol, pos) =
       case S.look(tenv, symbol) of
           SOME ty => actual_ty(ty, pos)
-        | NONE => (err pos ("Type " ^ s.name symbol ^ "not found"); T.NIL)
+        | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); T.NIL)
 
   fun actual_ty(ty, pos) =
       case ty of
           T.NAME(s, ref(SOME(t))) => actual_ty(t, pos)
-        | T.NAME(s, ref(NONE)) => (err pos ("Type " ^ s.name s ^ "is NONE"); T.NIL)
+        | T.NAME(s, ref(NONE)) => (err pos ("Type " ^ S.name s ^ "is NONE"); T.NIL)
         | _ => ty
 
   type venv = Env.enventry Symbol.table
@@ -63,9 +71,21 @@ struct
   fun checkNoValue ({exp, ty}, pos) =
     assertEq (ty, Ty.UNIT, op =, err pos, "no-value required";
     
-  fun checkFuncHead = () (* todo *)
+  (* use E.FunEntry {...} as dummy return value *)
+  (* If error, exit ? or return dummy entry ? *)
+  fun lookupFunEntry (venv, func:S.symbol, pos) = 
+    case S.look(venv, func) of
+         SOME fun_entry => fun_entry
+       | NONE => (err pos "Function " ^ S.name func ^ "not found"; E.FunEntry {formals: [], result: Ty.UNIT})  
 
-  fun checkFuncParams = () (* todo *)
+  fun checkFuncParams (formals: E.ty list, args: A.exp list, pos) = 
+  let
+    fun f (lhs_head::lhs_tail, rhs_head::rhs_tail) =
+        assertTypeEq(lhs_head, rhs_head, err pos,
+        "Parameter Mismatch:\n" ^ "function parameter: " ^ Ty.name lhs_head ^
+        "input parameter: " ^ Ty.name rhs_head) 
+      | f ([], []) = () 
+      | f (_, _) = err pos "Parameter size mismatch"
 
   fun transExp(venv, tenv, exp) =
     let fun trexp (A.OpExp{left, oper, right, pos}) =
@@ -88,8 +108,10 @@ struct
              [] => err ~1 "two or more expression in seq requried"
            | [(exp, pos)] => trexp(exp)
            | (exp, pos)::tail =>
-               (trexp(exp);
-                trexp(tail);)
+               (
+               trexp(exp);
+               trexp(tail)
+               )
       | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
         (
         checkInt(trexp lo, pos);
@@ -109,11 +131,9 @@ struct
         {exp=(), ty=Ty.STRING}        
       | trexp (A.CallExp {func, args, pos}) =
         (
-        checkFuncHead(func);
         let
-          val SOME(func_enventry) = S.look(venv, func)
-          val {formals=formals, result=result} = func_enventry
-          val () = checkFuncParams(formals, args)
+          val {formals=formals, result=result} = lookupFunEntry(venv, func, pos)
+          val () = checkFuncParams(formals, args, pos)
         in
           {exp=(), ty=result}
         end
