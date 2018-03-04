@@ -38,8 +38,8 @@ struct
   fun errWrapper pos msg =
       fn () => err pos msg
 
-  fun assertEq(eqFun: 'a * 'a -> bool , errFun: unit -> unit) =
-      if eqFun then
+  fun assertEq (eqFun: 'a * 'a -> bool , errFun: unit -> unit) =
+      if eqFun() then
           errFun()
       else
           ()
@@ -71,8 +71,8 @@ struct
       trexp exp
     end
 
-  fun transDec(venv, tenv, dec) =
-      let fun trdec(A.VarDec{name, typ, init, pos}) =
+  fun transDec (venv, tenv, dec) =
+      let fun trdec (A.VarDec{name, typ, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
                   case typ of
