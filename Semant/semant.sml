@@ -7,10 +7,7 @@ use "errormsg.sml";
 
 signature SEMANT =
 sig
-  
-  type venv
-  type tenv
-  type expty
+type venv type tenv type expty
 
   val transVar : venv * tenv * Absyn.var -> expty
 
@@ -31,20 +28,9 @@ struct
   structure Err = ErrorMsg
   structure A = Absyn
   structure Ty = Types
-  structure T = Types
   structure E = Env
   structure S = Symbol
   val err = Err.error
-
-  type venv = Env.enventry Symbol.table
-  type tenv = Ty.ty Symbol.table
-  type expty = {exp: Translate.exp, ty: Ty.ty}
-
-  fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
-      if eqFun(lhs, rhs) then
-          errCurry msg
-      else
-          ()
 
   fun compareAnyType(lhs: Ty.ty, rhs: Ty.ty) =
     case (lhs, rhs) of
@@ -71,7 +57,28 @@ struct
     else
       ()
 
-  fun isValidRecord T.RECORD(symTys, _) =
+  fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
+      if eqFun(lhs, rhs) then
+          errCurry msg
+      else
+          ()
+
+  fun assertDecTypeEq (ty: Ty.ty, decTy: Ty.ty, msgTmpl, pos) =
+      case ty of
+          Ty.NIL => assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record")
+        | Ty.RECORD =>
+          (
+            assertEq(isValidRecord ty, true, op =, err pos, msgTmpl ^ "Invalid record");
+            assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record");
+            (* structural equal *)
+            assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "record type mismatch")
+          )
+        | Ty.ARRAY =>
+          (* structural equal *)
+          assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "array type mismatch")
+        | otherTy => assertEq(ty, decTy, compareAnyType, err pos, msgTmpl ^ "type mismatch - " ^ (S.name s))
+
+  fun isValidRecord Ty.RECORD(symTys, _) =
       let 
           fun f hd::tl =
               if tl = nil then true
@@ -87,20 +94,18 @@ struct
       end
     | isValidRecord _ = false
 
-  (* use T.NIL as dummy return value *)
-  fun actual_ty(ty) =
-      case ty of
-          T.NAME(s, ref(SOME(t))) => actual_ty(t)
-        | T.NAME(s, ref(NONE)) => (Err.impossible ("Type " ^ S.name s ^ "is NONE"); T.NIL)
-        | _ => ty
-
-  fun lookActualType(tenv, symbol, pos) =
+  (* use Ty.NIL as dummy return value *)
+  fun lookActualType (tenv, symbol, pos) =
       case S.look(tenv, symbol) of
-          SOME ty => actual_ty(ty)
-        | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); T.NIL)
+          SOME ty => actual_ty ty
+        | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); Ty.NIL)
 
+  fun actual_ty(ty) =
+      case Ty.whatis ty of
+          SOME t => t
+        | NONE => (Err.impossible ("Type " ^ S.name symbol ^ "is NONE"); Ty.NIL)
 
-  (* use T.INT as dummy return value *)
+  (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv, symbol, pos) =
     case S.look(venv, symbol) of
          SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty)}
@@ -289,20 +294,7 @@ struct
                   val msgTmpl = "VarDec: "
                   val decTy = lookActualType(tenv, s, pos)
               in
-                  case ty of
-                      T.NIL => assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record")
-                    | T.RECORD =>
-                      (
-                        assertEq(isValidRecord ty, true, op =, err pos, msgTmpl ^ "Invalid record");
-                        assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record");
-                        (* structural equal *)
-                        assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "record type mismatch")
-                      )
-                    | T.ARRAY =>
-                      (* structural equal *)
-                      assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "array type mismatch")
-                    | _ => assertEq(decTy, ty, op =, err pos, msgTmpl ^ "type mismatch - " ^ (S.name s))
-                ;
+                  assertDecTypeEq(ty, decTy, msgTmpl, pos);
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
                     tenv = tenv
@@ -317,18 +309,68 @@ struct
                           trTyDecHeader(tenv', tl)
                       end
                     | trTyDecHeader (tenv, nil) = tenv
-                  (* second pass to fill body *)
+                  (* second pass to fill ref *)
 
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
-                      let val nameTy = transTy(tenv, ty)
+                      let val actualTy = transTy(tenv, ty)
                       in
-                          nameTyRef := lookActualType(tenv, name, pos);
-                          trTyDecBody(tenv, tl)
+                          case lookActualType(tenv, name) of
+                              Ty.NAME (_, SOME symbolTyRef) => (symbolTyRef := actualTy; ())
+                            | _ => impossible (msgTmpl ^ S.name name " not found in header"); ref NONE
+                          ;
+                            tenv
                       end
                     | trTyDecBody (tenv, nil) = tenv
                   val tenv' = trTyDecHeader(tenv, tydecs)
               in
                   trTyDecBody(tenv', tydecs)
+              end
+            | trdec (A.FunctionDec fundecs) =
+              let
+                  val msgTmpl = "FunDec: "
+                  fun trParams params = map (fn {name, typ, pos} =>
+                                                {name = name, ty = lookActualType(tenv, typ, pos)})
+                                            params
+                  (* first pass to scan headers*)
+
+                  fun trResult result = case result of
+                                            SOME(Ty.NIL, resultPos) => err pos (msgTmpl ^ "return value cannot be given as nil")
+                                          | SOME(resultName, resultPos) => lookActualType(tenv, resultName, resultPos)
+                                          (* what to do when return type is not given? *)
+                                          | NONE => Ty.NIL
+
+                  fun trFunDecHeader (venv, {name, params, result, pos}::tl) =
+                      let
+                          val resultTy = trResult result
+                          val paramNameTys = trParams params
+                          val venv' = S.enter(venv, name,
+                                              E.FunEntry{formals = map #ty paramNameTys, result = resultTy})
+                      in
+                          trFunDecHeader(venv', tl)
+                      end
+                    | trFunDecHeader (venv, nil) = venv
+
+                  val venv' = trFunDecHeader(venv, fundecs)
+
+                  (* second pass to translate body*)
+                  fun trFunDec (venv, {name, params, result, body, pos}::tl) =
+                      let
+                          val resultTy = trResult result
+                          val paramNameTys = trParams params
+                          fun enterParam ({name, ty}, venv) =
+                              S.enter(venv, name, E.VarEntry{ty = ty})
+                          val venv' = foldl enterParam venv paramNameTys
+                          val bodyTy = #ty transExp(venv', tenv, body)
+                      in
+                          assertDecTypeEq(bodyTy, resultTy, msgTmpl, pos);
+                          venv
+                      end
+                    | trFunDec (venv, nil) = venv
+              in
+                  {
+                    venv = trFunDec(venv', fundecs),
+                    tenv = tenv
+                  }
               end
       in
           trdec dec
