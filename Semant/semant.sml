@@ -32,6 +32,9 @@ struct
   structure S = Symbol
   val err = Err.error
 
+  val loopLevel = ref 0
+  val breakNum = ref 0
+  
   fun compareAnyType(lhs: Ty.ty, rhs: Ty.ty) =
     case (lhs, rhs) of
          (Ty.NIL, Ty.NIL) => true
@@ -283,12 +286,23 @@ struct
 	  if (assertTypeEq(varTy, expTy, err pos, "") then
 	      {exp=(), ty=Ty.UNIT}
 	  else
-	      (
-	      err pos ("Assignment type mismatch");
-	      {exp=(), ty=Ty.UNIT}
-	      )
+	      (err pos ("Assignment type mismatch");
+	      {exp=(), ty=Ty.UNIT})
       end
-      
+   | trexp (A.BreakExp pos) =
+     let
+         val _ = breakNum = !breakNum + 1
+     in
+         if !loopLevel > 0 then
+	     if !breakNum = 1 then
+	         {exp=(), ty=Ty.UNIT}
+	     else
+	         (err pos ("Cannot BREAK twice for a single loop");
+		 {exp=(), ty=Ty.UNIT})
+	 else
+	     (err pos ("Invalid BREAK");
+	     {exp=(), ty=Ty.UNIT})
+     end
 	(* ... *)
     in
       trexp exp
