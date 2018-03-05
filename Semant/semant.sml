@@ -336,11 +336,11 @@ struct
       
     fun transTy (tenv, ty) =
     let
-      fun trty (NameTy (sym, pos)) = {exp=(), ty=lookActualType(tenv, sym, pos)}
-        | trty (RecordTy (field_list)) = {exp=(), ty=((map (fn {name, escape, typ, pos} =>
-            (name, lookActualType(tenv, typ, pos))) field_list), ref ())} 
-        | trty (ArrayTy (sym, pos)) = {exp=(), ty=(lookActualType(tenv, sym,
-        pos), ref ())}
+      fun trty (NameTy (sym, pos)) = lookActualType(tenv, sym, pos)
+        | trty (RecordTy (field_list)) = Ty.RECORD ((map (fn {name, escape, typ, pos} =>
+            (name, lookActualType(tenv, typ, pos))) field_list), ref ()) 
+        | trty (ArrayTy (sym, pos)) = Ty.ARRAY (lookActualType(tenv, sym,
+        pos), ref ())
     in
       trty ty
     end
