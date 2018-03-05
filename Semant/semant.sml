@@ -333,4 +333,15 @@ struct
       in
           trdec dec
       end
+      
+    fun transTy (tenv, ty) =
+    let
+      fun trty (NameTy (sym, pos)) = {exp=(), ty=lookActualType(tenv, sym, pos)}
+        | trty (RecordTy (field_list)) = {exp=(), ty=((map (fn {name, escape, typ, pos} =>
+            (name, lookActualType(tenv, typ, pos))) field_list), ref ())} 
+        | trty (ArrayTy (sym, pos)) = {exp=(), ty=(lookActualType(tenv, sym,
+        pos), ref ())}
+    in
+      trty ty
+    end
 end
