@@ -78,6 +78,31 @@ struct
         | T.NAME(s, ref(NONE)) => (err pos ("Type " ^ S.name s ^ "is NONE"); T.NIL)
         | _ => ty
 
+  (* use T.INT as dummy return value *)
+  fun lookupVariable(venv, symbol, pos) =
+    case S.look(venv, symbol) of
+         SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty, pos)}
+       | NONE => (err pos "Undefined variable " ^ S.name symbol; {exp=(), ty=Ty.INT}) 
+
+  fun lookupRecordFieldType(sym_ty_list:((S.symbol * ty) list), id:S.symbol, pos) =
+    case 
+      (
+      foldl
+        (fn ((field, field_ty),(id, id_ty_opt)) =>
+          (
+          case id_ty_opt of
+              NONE => if field = id then (id, SOME(field_ty))
+                                                 else (id, NONE)  
+            | SOME(id_ty) => id_ty_opt 
+          )
+        )
+        (id, NONE) sym_ty_list
+      ) of
+      SOME(field_ty) => actual_ty(field_ty, pos)
+    | NONE => err pos "Field" ^ S.name id ^ " not found"
+      
+
+
   type venv = Env.enventry Symbol.table
   type tenv = ty Symbol.table
   type expty = {exp: Translate.exp, ty: Types.ty}
@@ -110,63 +135,92 @@ struct
     f(formals, args)
   end
 
+  fun transVar(venv, tenv, var) =
+  let
+    fun trvar(A.SimpleVar(sym, pos)) = lookupVariable(venv, sym, pos)
+      | trvar(A.FieldVar(lvalue, sym, pos)) =
+        let
+          val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
+        in
+          case lvalue_ty of
+               Ty.RECORD (sym_ty_list, uni) =>
+               {exp=(), ty=lookupRecordFieldType(sym_ty_list,
+               sym)}
+             | _ => err pos "Record requried"
+        end
+      | trvar(A.SubscriptVar(lvalue, exp, pos)) =
+        let 
+          val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
+        in
+          case lvalue_ty of
+            Ty.ARRAY (ty, uni) =>
+              (
+              checkInt(exp, pos);
+              {exp=(), ty=ty}          
+              )
+          | _ => err pos "Array required"
+        end
+  in
+    trvar var
+  end
+
   fun transExp(venv, tenv, exp) =
-    let fun trexp (A.OpExp{left, oper, right, pos}) =
-        (
-        checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Ty.INT}
-        )
-      | trexp (A.IntExp int) =
-        {exp=(), ty=Ty.INT}
-      | trexp (A.LetExp {decs, body, pos}) =
-        let
-          val {venv=venv', tenv=tenv'} =
-          transDec(venv, tenv, decs)
-        in
-          transExp(venv', tenv', body)
-        end
-      | trexp (A.SeqExp seq) =
-        case seq of
-             [] => err ~1 "two or more expression in seq requried"
-           | [(exp, pos)] => trexp(exp)
-           | (exp, pos)::tail =>
-               (
-               trexp(exp);
-               trexp(tail)
-               )
-      | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
-        (
-        checkInt(trexp lo, pos);
-        checkInt(trexp hi, pos);
-        let
-          venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
-        in
-          checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
-        end;
-        {exp = (), ty=Ty.UNIT}
-        )
-      | trexp (A.VarExp var) =
-        transVar(venv, tenv, var)
-      | trexp (A.NilExp) =
-        {exp=(), ty=Ty.NIL}
-      | trexp (A.StringExp) =
-        {exp=(), ty=Ty.STRING}        
-      | trexp (A.CallExp {func, args, pos}) =
-        (
-        let
-          val {formals=formals, result=result} = lookupFunEntry(venv, func, pos)
-          val () = checkFuncParams(formals, args, pos)
-        in
-          {exp=(), ty=result}
-        end
-        )
-      | trexp (A.ArrayExp {typ, size, init, pos}) =
-      	{exp=(), ty=Ty.UNIT}
-	(* ... *)
-    in
-      trexp exp
-    end
+  let fun trexp (A.OpExp{left, oper, right, pos}) =
+      (
+      checkInt(trexp left, pos);
+      checkInt(trexp right, pos);
+      {exp=(), ty=Ty.INT}
+      )
+    | trexp (A.IntExp int) =
+      {exp=(), ty=Ty.INT}
+    | trexp (A.LetExp {decs, body, pos}) =
+      let
+        val {venv=venv', tenv=tenv'} =
+        transDec(venv, tenv, decs)
+      in
+        transExp(venv', tenv', body)
+      end
+    | trexp (A.SeqExp seq) =
+      case seq of
+           [] => err ~1 "two or more expression in seq requried"
+         | [(exp, pos)] => trexp(exp)
+         | (exp, pos)::tail =>
+             (
+             trexp(exp);
+             trexp(tail)
+             )
+    | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
+      (
+      checkInt(trexp lo, pos);
+      checkInt(trexp hi, pos);
+      let
+        venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+      in
+        checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
+      end;
+      {exp = (), ty=Ty.UNIT}
+      )
+    | trexp (A.VarExp var) =
+      transVar(venv, tenv, var)
+    | trexp (A.NilExp) =
+      {exp=(), ty=Ty.NIL}
+    | trexp (A.StringExp) =
+      {exp=(), ty=Ty.STRING}        
+    | trexp (A.CallExp {func, args, pos}) =
+      (
+      let
+        val {formals=formals, result=result} = lookupFunEntry(venv, func, pos)
+        val () = checkFuncParams(formals, args, pos)
+      in
+        {exp=(), ty=result}
+      end
+      )
+    | trexp (A.ArrayExp {typ, size, init, pos}) =
+      {exp=(), ty=Ty.UNIT}
+  (* ... *)
+  in
+    trexp exp
+  end
 
   fun transDec (venv, tenv, dec) =
       let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
