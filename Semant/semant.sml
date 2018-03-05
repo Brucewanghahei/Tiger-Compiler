@@ -99,17 +99,17 @@ struct
   type expty = {exp: Translate.exp, ty: Types.ty}
 
   fun checkInt ({exp, ty}, pos) = 
-    assertEq (ty, Ty.INT, op =, err pos, "integer required";
+    assertEq (ty, Ty.INT, op =, err pos, "integer required")
   
   fun checkNoValue ({exp, ty}, pos) =
-    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required";
+    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required")
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
   fun lookupFunEntry (venv, func:S.symbol, pos) = 
     case S.look(venv, func) of
          SOME fun_entry => fun_entry
-       | NONE => (err pos "Function " ^ S.name func ^ "not found"; E.FunEntry {formals: [], result: Ty.UNIT})  
+       | NONE => (err pos "Function " ^ S.name func ^ "not found"; E.FunEntry {formals = [], result = Ty.UNIT})
 
   fun checkFuncParams (formals: E.ty list, args: A.exp list, pos) = 
   let
@@ -156,7 +156,7 @@ struct
         checkInt(trexp lo, pos);
         checkInt(trexp hi, pos);
         let
-          venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+          val venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
         in
           checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
         end;
