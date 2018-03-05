@@ -96,14 +96,14 @@ struct
 
   fun lookActualType(tenv, symbol, pos) =
       case S.look(tenv, symbol) of
-          SOME ty => actual_ty(ty, pos)
+          SOME ty => actual_ty(ty)
         | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); T.NIL)
 
 
   (* use T.INT as dummy return value *)
   fun lookupVariable(venv, symbol, pos) =
     case S.look(venv, symbol) of
-         SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty, pos)}
+         SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty)}
        | NONE => (err pos "Undefined variable " ^ S.name symbol; {exp=(), ty=Ty.INT}) 
 
   fun lookupRecordFieldType(sym_ty_list:((S.symbol * ty) list), id:S.symbol, pos) =
@@ -120,7 +120,7 @@ struct
         )
         (id, NONE) sym_ty_list
       ) of
-      SOME(field_ty) => actual_ty(field_ty, pos)
+      SOME(field_ty) => actual_ty(field_ty)
     | NONE => err pos "Field" ^ S.name id ^ " not found"
       
 
@@ -243,7 +243,7 @@ struct
 	    case S.look(tenv, typ) of
 	      SOME (ty) =>
             (
-	        case actual_ty(ty, pos) of
+	        case actual_ty(ty) of
 	          Ty.ARRAY(t, u) =>
 		        if checkInt(sizeTy, pos) then
 		          if assertTypeEq({exp=(), ty=t}, initTy, err pos, "") then
