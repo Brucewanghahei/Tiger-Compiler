@@ -72,10 +72,10 @@ struct
           SOME ty => actual_ty(ty, pos)
         | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); T.NIL)
 
-  fun actual_ty(ty, pos) =
+  fun actual_ty(ty) =
       case ty of
-          T.NAME(s, ref(SOME(t))) => actual_ty(t, pos)
-        | T.NAME(s, ref(NONE)) => (err pos ("Type " ^ S.name s ^ "is NONE"); T.NIL)
+          T.NAME(s, ref(SOME(t))) => actual_ty(t)
+        | T.NAME(s, ref(NONE)) => (Err.impossible ("Type " ^ S.name s ^ "is NONE"); T.NIL)
         | _ => ty
 
   type venv = Env.enventry Symbol.table
@@ -227,23 +227,18 @@ struct
             | trdec (A.TypeDec(tydecs)) =
               let
                   (* first pass to scan headers*)
-                  fun trTyDecHeader (tenv, {name, ty, pos}::tl) =
+                  fun trTyDecHeader (tenv, {name}::tl) =
                       let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
                       in
                           trTyDecHeader(tenv', tl)
                       end
-                    | trTyDecHeader (tenv, nil) =
-                      tenv
+                    | trTyDecHeader (tenv, nil) = tenv
                   (* second pass to fill body *)
+
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
                       let val nameTy = transTy(tenv, ty)
                       in
-                          case S.look(tenv, name) of
-                              (s, SOME nameTyRef) =>
-                              nameTyRef := nameTy
-                            | (s, NONE) =>
-                              err pos ("Type" ^ S.name name ^ "not found in header")
-                        ;
+                          nameTyRef := lookActualType(tenv, name, pos);
                           trTyDecBody(tenv, tl)
                       end
                     | trTyDecBody (tenv, nil) = tenv
