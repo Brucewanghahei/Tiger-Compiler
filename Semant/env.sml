@@ -9,7 +9,7 @@ sig
   val base_venv : enventry Symbol.table (* predefined functions *)
 end
 
-structure env :> ENV =
+structure Env :> ENV =
 struct
   type access = unit (* todo: unknown *)
   type ty = Types.ty

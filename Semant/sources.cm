@@ -11,8 +11,9 @@ types.sml
 tiger.lex
 tiger.grm
 semant.sml
-transalte.sml
+translate.sml
 main.sml
+env.sml
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
 $/basis.cm
