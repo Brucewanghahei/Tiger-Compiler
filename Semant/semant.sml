@@ -249,10 +249,10 @@ struct
 	      SOME (ty) =>
             (
 	        case actual_ty(ty) of
-	          Ty.ARRAY(t, u) =>
+	          Ty.ARRAY(baseTy, u) =>
 		        if checkInt(sizeTy, pos) then
-		          if assertTypeEq({exp=(), ty=t}, initTy, err pos, "") then
-		            {exp=(), ty=Ty.ARRAY(t, u)}
+		          if assertTypeEq(baseTy, initTy, err pos, "") then
+		            {exp=(), ty=Ty.ARRAY(baseTy, u)}
 		          else
                     (
 		            err pos ("Array initial type does not match base type");
@@ -275,6 +275,20 @@ struct
 	      	{exp=(), ty=Ty.UNIT}
             )
 	  end
+    | trexp (A.AssignExp {var, exp, pos}) =
+      let
+	  val {var=vExp, ty=varTy} = transVar (venv, tenv, var)
+          val {exp=eExp, ty=expTy} = transExp (venv, tenv, exp)
+      in
+	  if (assertTypeEq(varTy, expTy, err pos, "") then
+	      {exp=(), ty=Ty.UNIT}
+	  else
+	      (
+	      err pos ("Assignment type mismatch");
+	      {exp=(), ty=Ty.UNIT}
+	      )
+      end
+      
 	(* ... *)
     in
       trexp exp
