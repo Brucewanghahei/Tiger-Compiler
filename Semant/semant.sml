@@ -66,6 +66,22 @@ struct
     else
       ()
 
+  fun isValidRecord T.RECORD(symTys, _) =
+      let 
+          fun f hd::tl =
+              if tl = nil then true
+              else
+                  let val hd2::tl2 = tl
+                  in
+                      hd <> hd2 andalso f tl
+                  end
+            | f nil = true
+          val syms = ListMergeSort.sort op > (map #1 symTys)
+      in
+          f syms
+      end
+    | isValidRecord _ = false
+
   (* use T.NIL as dummy return value *)
   fun lookActualType(tenv, symbol, pos) =
       case S.look(tenv, symbol) of
@@ -200,24 +216,22 @@ struct
               end
             | trdec (A.VarDec{name, typ = SOME(s, _), init, pos}) = 
               let val {exp, ty} = transExp(venv, tenv, init)
-                  val msgTmpl = "VarDec: type mismatched"
+                  val msgTmpl = "VarDec: "
                   val decTy = lookActualType(tenv, s, pos)
               in
                   case ty of
-                      T.NIL => case decTy of
-                                   T.RECORD => ()
-                                 | _ => err pos (msgTmpl ^ " - nil")
+                      T.NIL => assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record")
                     | T.RECORD =>
-                      (* structural equal *)
-                      assertEq(#1 ty, #1 decTy,
-                               op =,
-                               err pos, msgTmpl ^ " - record")
+                      (
+                        assertEq(isValidRecord ty, true, op =, err pos, msgTmpl ^ "Invalid record");
+                        assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record");
+                        (* structural equal *)
+                        assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "record type mismatch")
+                      )
                     | T.ARRAY =>
                       (* structural equal *)
-                      assertEq(#1 ty, #1 decTy,
-                               op =,
-                               err pos, msgTmpl ^ " - array")
-                    | _ => assertEq(decTy, ty, op =, err pos, msgTmpl ^ (S.name s))
+                      assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "array type mismatch")
+                    | _ => assertEq(decTy, ty, op =, err pos, msgTmpl ^ "type mismatch - " ^ (S.name s))
                 ;
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
