@@ -162,7 +162,28 @@ struct
         end
         )
       | trexp (A.ArrayExp {typ, size, init, pos}) =
-      	{exp=(), ty=Ty.UNIT}
+      	let
+	  val sizeTy = trexp size
+	  val initTy = trexp init
+	in
+	  case S.look(tenv, typ) of
+	    SOME (ty) =>
+	      case actual_ty(ty, pos) of
+	        Ty.ARRAY(t, u) =>
+		  if checkInt(sizeTy, pos) then
+		    if assertTypeEq({exp=(), ty=t}, initTy, err pos, "") then
+		      {exp=(), ty=Ty.ARRAY(t, u)}
+		    else
+		      err pos ("Array initial type does not match base type");
+		      {exp=(), ty=Ty.UNIT}
+		  else
+		    err pos ("Array size must be INT");
+		    {exp=(), ty=Ty.UNIT}
+		| _ => err pos ("Return type must be an ARRAY");
+		       {exp=(), ty=Ty.UNIT}
+	    | _ => err pos ("Unable to define ARRAY based on current type");
+	      	   {exp=(), ty=Ty.UNIT}
+	end
 	(* ... *)
     in
       trexp exp
