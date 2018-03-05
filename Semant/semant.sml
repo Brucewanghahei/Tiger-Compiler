@@ -222,7 +222,11 @@ struct
       checkInt(trexp lo, pos);
       checkInt(trexp hi, pos);
       let
-        val venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+	val _ = loopLevel := loopLevel + 1
+	val venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+	(*body check required*)
+	val _ = loopLevel := loopLevel - 1
+	val _ = breakNum := 0
       in
         checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
       end;
@@ -289,10 +293,28 @@ struct
 	      (err pos ("Assignment type mismatch");
 	      {exp=(), ty=Ty.UNIT})
       end
-   | trexp (A.BreakExp pos) =
-     let
+    | trexp (A.WhileExp {test, body, pos}) =
+      let
+          val _ = loopLevel := !loopLevel + 1
+	  val {exp=tExp, ty=testTy} = transExp (venv, tenv, test)
+	  val {exp=bExp, ty=bodyTy} = transExp (venv, tenv, body)
+	  val _ = loopLevel := !loopLevel - 1
+	  val _ = breakNum := 0
+      in
+	  if checkInt(testTy, pos) then
+	      if checkNoValue(bodyTy, pos) then
+	          {exp=(), ty=Ty.UNIT}
+	      else
+	          (err pos ("Invalid WHILE loop body type, UNIT expected");
+		  {exp=(), ty=Ty.UNIT})
+	  else
+	      (err pos ("Invalid WHILE loop test type, INT expected");
+	      {exp=(), ty=Ty.UNIT})
+      end
+    | trexp (A.BreakExp pos) =
+      let
          val _ = breakNum = !breakNum + 1
-     in
+      in
          if !loopLevel > 0 then
 	     if !breakNum = 1 then
 	         {exp=(), ty=Ty.UNIT}
@@ -302,7 +324,7 @@ struct
 	 else
 	     (err pos ("Invalid BREAK");
 	     {exp=(), ty=Ty.UNIT})
-     end
+      end
 	(* ... *)
     in
       trexp exp
