@@ -286,7 +286,7 @@ struct
       let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
-                  assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly")
+                  assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = ty}),
                     tenv = tenv
