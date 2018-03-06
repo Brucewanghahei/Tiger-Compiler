@@ -277,6 +277,29 @@ struct
         {exp=(), ty=Ty.UNIT}
         )
       end
+    | trexp (A.IfExp {test, then', else', pos}) =
+      (case else' of
+          NONE =>
+	      let
+	          val {exp=testExp, ty=testTy} = transExp (venv, tenv, test)
+		  val {exp=thenExp, ty=thenTy} = transExp (venv, tenv, then')
+	      in
+	          (checkInt(testTy, pos, "Invalid TEST expression type, INT expected");
+		  checkNoValue(thenTy, pos, "Invalid THEN expression type, UNIT expected");
+		  {exp=(), ty=Ty.UNIT})
+	      end
+	  | SOME =>
+	      let
+	          val {exp=testExp, ty=testTy} = transExp (venv, tenv, test)
+		  val {exp=thenExp, ty=thenTy} = transExp (venv, tenv, then')
+		  val {exp=elseExp, ty=elseTy} = transExp (venv, tenv, else')
+	      in
+	          (checkInt(testTy, pos, "Invalid TEST expression type, INT expected");
+		  checkNoValue(thenExp, pos, "Invalid THEN expression type, UNIT expected");
+		  checkNoValue(elseExp, pos, "Invalid ELSE expression type, UNIT expected");
+		  {exp=(), ty=Tu.UNIT})
+	      end
+      )
 	(* ... *)
     in
       trexp exp
