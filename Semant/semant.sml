@@ -7,7 +7,9 @@ use "errormsg.sml";
 
 signature SEMANT =
 sig
-type venv type tenv type expty
+  type venv
+  type tenv 
+  type expty
 
   val transVar : venv * tenv * Absyn.var -> expty
 
@@ -31,6 +33,10 @@ struct
   structure E = Env
   structure S = Symbol
   val err = Err.error
+
+  type venv = E.venv
+  type tenv = E.tenv
+  type expty = {exp: Translate.exp, ty: Types.ty}
 
   val loopLevel = ref 0
   val breakNum = ref 0
@@ -67,6 +73,8 @@ struct
           ()
 
   fun assertDecTypeEq (ty: Ty.ty, decTy: Ty.ty, msgTmpl, pos) =
+    assertTypeEq(ty, decTy, err pos, "type mismatch")
+    (*
       case ty of
           Ty.NIL => assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record")
         | Ty.RECORD =>
@@ -79,11 +87,13 @@ struct
         | Ty.ARRAY =>
           (* structural equal *)
           assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "array type mismatch")
-        | otherTy => assertEq(ty, decTy, compareAnyType, err pos, msgTmpl ^ "type mismatch - " ^ (S.name s))
+        | otherTy => assertEq(ty, decTy, compareAnyType, err pos, msgTmpl ^
+        "type mismatch - " ^ (Ty.name ty) ^ " and " ^ (Ty.name decTy))
+    *)
 
-  fun isValidRecord Ty.RECORD(symTys, _) =
+  fun isValidRecord (Ty.RECORD(symTys, _)) =
       let 
-          fun f hd::tl =
+          fun f (hd::tl) =
               if tl = nil then true
               else
                   let val hd2::tl2 = tl
@@ -91,30 +101,31 @@ struct
                       hd <> hd2 andalso f tl
                   end
             | f nil = true
-          val syms = ListMergeSort.sort op > (map #1 symTys)
+          val syms = ListMergeSort.sort op > (map (fn x => (S.getInt(#1 x))) symTys)
       in
           f syms
       end
     | isValidRecord _ = false
 
   (* use Ty.NIL as dummy return value *)
-  fun lookActualType (tenv, symbol, pos) =
+  fun actual_ty(ty) =
+      case Ty.whatis ty of
+          SOME t => t
+        | NONE => (Err.impossible ("Type " ^ (Ty.name ty) ^ "is NONE"); Ty.NIL)
+
+  fun lookActualType (tenv:tenv, symbol:S.symbol, pos) =
       case S.look(tenv, symbol) of
           SOME ty => actual_ty ty
         | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); Ty.NIL)
 
-  fun actual_ty(ty) =
-      case Ty.whatis ty of
-          SOME t => t
-        | NONE => (Err.impossible ("Type " ^ S.name symbol ^ "is NONE"); Ty.NIL)
-
   (* use Ty.INT as dummy return value *)
-  fun lookupVariable(venv, symbol, pos) =
+  fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
          SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty)}
-       | NONE => (err pos "Undefined variable " ^ S.name symbol; {exp=(), ty=Ty.INT}) 
+       | NONE => (err pos ("Undefined variable " ^ (S.name symbol)); {exp=(), ty=Ty.INT}) 
 
-  fun lookupRecordFieldType(sym_ty_list:((S.symbol * ty) list), id:S.symbol, pos) =
+  (* use Ty.UNIT as dummy return value *)
+  fun lookupRecordFieldType(sym_ty_list:((S.symbol * Ty.ty) list), id:S.symbol, pos) =
     case 
       (
       foldl
@@ -123,13 +134,16 @@ struct
           case id_ty_opt of
               NONE => if field = id then (id, SOME(field_ty))
                                                  else (id, NONE)  
-            | SOME(id_ty) => id_ty_opt 
+            | SOME(id_ty) => (id, id_ty_opt) 
           )
         )
         (id, NONE) sym_ty_list
       ) of
-      SOME(field_ty) => actual_ty(field_ty)
-    | NONE => err pos "Field" ^ S.name id ^ " not found"
+      (id, SOME(field_ty)) => actual_ty(field_ty)
+    | (id, NONE) => (
+        err pos ("Field" ^ (S.name id) ^ " not found");
+        Ty.UNIT
+        )
       
 
 
@@ -141,18 +155,18 @@ struct
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
-  fun lookupFunEntry (venv, func:S.symbol, pos) = 
+  fun lookupFunEntry (venv:venv, func:S.symbol, pos) = 
     case S.look(venv, func) of
          SOME fun_entry => fun_entry
-       | NONE => (err pos "Function " ^ S.name func ^ "not found"; E.FunEntry {formals = [], result = Ty.UNIT})
+       | NONE => (err pos ("Function " ^ (S.name func) ^ "not found"); E.FunEntry {formals = [], result = Ty.UNIT})
 
-  fun checkFuncParams (formals: E.ty list, args: A.exp list, pos) = 
+  fun checkFuncParams (formals: Ty.ty list, args: Ty.ty list, pos) = 
   let
     fun f (lhs_head::lhs_tail, rhs_head::rhs_tail) =
         (
         assertTypeEq(lhs_head, rhs_head, err pos,
-        "Parameter Mismatch:\n" ^ "function parameter: " ^ Ty.name lhs_head ^
-        "input parameter: " ^ Ty.name rhs_head);
+        "Parameter Mismatch:\n" ^ "function parameter: " ^ (Ty.name lhs_head) ^
+        "input parameter: " ^ (Ty.name rhs_head));
         f (lhs_tail, rhs_tail)
         )
       | f ([], []) = () 
@@ -161,7 +175,7 @@ struct
     f(formals, args)
   end
 
-  fun transVar(venv, tenv, var) =
+  fun transVar(venv:venv, tenv:tenv, var:A.var) =
   let
     fun trvar(A.SimpleVar(sym, pos)) = lookupVariable(venv, sym, pos)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
@@ -171,8 +185,12 @@ struct
           case lvalue_ty of
                Ty.RECORD (sym_ty_list, uni) =>
                {exp=(), ty=lookupRecordFieldType(sym_ty_list,
-               sym)}
-             | _ => err pos "Record requried"
+               sym, pos)}
+             | _ => 
+                (
+                err pos "Record requried";
+                {exp=(), ty=Ty.UNIT}
+                )
         end
       | trvar(A.SubscriptVar(lvalue, exp, pos)) =
         let 
@@ -181,16 +199,20 @@ struct
           case lvalue_ty of
             Ty.ARRAY (ty, uni) =>
               (
-              checkInt(exp, pos, "");
+              checkInt(transExp(venv, tenv, exp), pos, "");
               {exp=(), ty=ty}          
               )
-          | _ => err pos "Array required"
+          | _ =>
+              (
+              err pos "Array required";
+              {exp=(), ty=Ty.UNIT}
+              )
         end
   in
     trvar var
   end
 
-  fun transExp(venv, tenv, exp) =
+  and transExp(venv:venv, tenv:tenv, exp:A.exp) =
   let fun trexp (A.OpExp{left, oper, right, pos}) =
       (
       checkInt(trexp left, pos, "");
@@ -207,28 +229,34 @@ struct
         transExp(venv', tenv', body)
       end
     | trexp (A.SeqExp seq) =
-      (
-      case seq of
-           [] => err ~1 "two or more expression in seq requried"
-         | [(exp, pos)] => trexp(exp)
-         | (exp, pos)::tail =>
-             (
-             trexp(exp);
-             trexp(tail)
-             )
-      )
-    | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
+      let
+        fun f seq =
+          case seq of
+               [] => (
+                 err ~1 "two or more expression in seq requried";
+                 {exp=(), ty=Ty.UNIT}
+                 )
+             | [(exp, pos)] => trexp(exp)
+             | (exp, pos)::tail =>
+                 (
+                 trexp(exp);
+                 f(tail)
+                 )
+      in
+        f seq
+      end
+    | trexp (A.ForExp {var=id, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
       (
       checkInt(trexp lo, pos, "");
       checkInt(trexp hi, pos, "");
       let
-        val _ = loopLevel := loopLevel + 1
-        val venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+        val _ = loopLevel := (!loopLevel) + 1
+        val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.UNIT}))
         (*body check required*)
-        val _ = loopLevel := loopLevel - 1
+        val _ = loopLevel := (!loopLevel) - 1
         val _ = breakNum := 0
       in
-        checkNoValue(transExp(venv', tenv, body), "") (* ensure id not re-assigned in the body scope *)
+        checkNoValue(transExp(venv', tenv, body), pos, "") (* ensure id not re-assigned in the body scope *)
       end;
       {exp = (), ty=Ty.UNIT}
       )
@@ -236,13 +264,13 @@ struct
       transVar(venv, tenv, var)
     | trexp (A.NilExp) =
       {exp=(), ty=Ty.NIL}
-    | trexp (A.StringExp) =
+    | trexp (A.StringExp (str, pos)) =
       {exp=(), ty=Ty.STRING}        
     | trexp (A.CallExp {func, args, pos}) =
       (
       let
-        val {formals=formals, result=result} = lookupFunEntry(venv, func, pos)
-        val () = checkFuncParams(formals, args, pos)
+        val E.FunEntry{formals=formals, result=result} = lookupFunEntry(venv, func, pos)
+        val () = checkFuncParams(formals, map #ty (map trexp args), pos)
       in
         {exp=(), ty=result}
       end
@@ -255,13 +283,13 @@ struct
         (
         checkInt(trexp size, pos, "Array size must be INT");
         assertTypeEq(array_ele_ty, initTy, err pos, "Array initial type does not match base type");
-        {exp=(), ty=Ty.ARRAY(array_ele_ty, ())};
+        {exp=(), ty=Ty.ARRAY(array_ele_ty, ref ())}
         )
 	  end
     | trexp (A.AssignExp {var, exp, pos}) =
       let
-	    val {var=vExp, ty=varTy} = transVar (venv, tenv, var)
-        val {exp=eExp, ty=expTy} = transExp (venv, tenv, exp)
+	    val {exp=vExp, ty=varTy} = transVar (venv, tenv, var)
+        val {exp=eExp, ty=expTy} = trexp exp
       in
         (
 	    assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
@@ -271,20 +299,18 @@ struct
     | trexp (A.WhileExp {test, body, pos}) =
       let
         val _ = loopLevel := !loopLevel + 1
-	    val {exp=tExp, ty=testTy} = transExp (venv, tenv, test)
-	    val {exp=bExp, ty=bodyTy} = transExp (venv, tenv, body)
 	    val _ = loopLevel := !loopLevel - 1
 	    val _ = breakNum := 0
       in
 	    (
-        checkInt(testTy, pos, "Invalid WHILE loop test type, INT expected");
-	    checkNoValue(bodyTy, pos, "Invalid WHILE loop body type, UNIT expected");
+        checkInt(trexp test, pos, "Invalid WHILE loop test type, INT expected");
+	    checkNoValue(trexp body, pos, "Invalid WHILE loop body type, UNIT expected");
 	    {exp=(), ty=Ty.UNIT}
         )
       end
     | trexp (A.BreakExp pos) =
       let
-        val _ = breakNum = !breakNum + 1
+        val _ = breakNum := (!breakNum) + 1
       in
         (
         assertEq(!loopLevel, 0, op >, err pos, "Invalid BREAK");
@@ -297,7 +323,7 @@ struct
       trexp exp
     end
 
-  fun transDec (venv, tenv, dec) =
+    and transDec (venv:venv, tenv:tenv, dec) =
       let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
@@ -320,7 +346,7 @@ struct
             | trdec (A.TypeDec(tydecs)) =
               let
                   (* first pass to scan headers*)
-                  fun trTyDecHeader (tenv, {name}::tl) =
+                  fun trTyDecHeader (tenv:tenv, {name}::tl) =
                       let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
                       in
                           trTyDecHeader(tenv', tl)
@@ -331,13 +357,13 @@ struct
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
                       let val actualTy = transTy(tenv, ty)
                       in
-                          case lookActualType(tenv, name) of
+                        case lookActualType(tenv, name) of
                               Ty.NAME (_, SOME symbolTyRef) => (symbolTyRef := actualTy; ())
                             | _ => impossible (msgTmpl ^ S.name name " not found in header"); ref NONE
                           ;
                             tenv
                       end
-                    | trTyDecBody (tenv, nil) = tenv
+                    | trTyDecBody (tenv:tenv, nil) = tenv
                   val tenv' = trTyDecHeader(tenv, tydecs)
               in
                   trTyDecBody(tenv', tydecs)
@@ -356,7 +382,8 @@ struct
                                           (* what to do when return type is not given? *)
                                           | NONE => Ty.NIL
 
-                  fun trFunDecHeader (venv, {name, params, result, pos}::tl) =
+                  fun trFunDecHeader (venv:venv, {name, params, result,
+                    pos}::tl: A.fundec list) =
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
@@ -370,14 +397,15 @@ struct
                   val venv' = trFunDecHeader(venv, fundecs)
 
                   (* second pass to translate body*)
-                  fun trFunDec (venv, {name, params, result, body, pos}::tl) =
+                  fun trFunDec (venv:venv, {name, params, result, body,
+                    pos}::tl: A.fundec list) =
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
-                          fun enterParam ({name, ty}, venv) =
+                          fun enterParam ({name, ty}, venv:venv) =
                               S.enter(venv, name, E.VarEntry{ty = ty})
                           val venv' = foldl enterParam venv paramNameTys
-                          val bodyTy = #ty transExp(venv', tenv, body)
+                          val bodyTy = #ty (transExp(venv', tenv, body))
                       in
                           assertDecTypeEq(bodyTy, resultTy, msgTmpl, pos);
                           venv
@@ -393,14 +421,20 @@ struct
           trdec dec
       end
       
-    fun transTy (tenv, ty) =
+    and transTy (tenv:tenv, ty:A.ty) =
     let
-      fun trty (NameTy (sym, pos)) = lookActualType(tenv, sym, pos)
-        | trty (RecordTy (field_list)) = Ty.RECORD ((map (fn {name, escape, typ, pos} =>
+      fun trty (A.NameTy (sym, pos)) = lookActualType(tenv, sym, pos)
+        | trty (A.RecordTy (field_list)) = Ty.RECORD ((map (fn {name, escape, typ, pos} =>
             (name, lookActualType(tenv, typ, pos))) field_list), ref ()) 
-        | trty (ArrayTy (sym, pos)) = Ty.ARRAY (lookActualType(tenv, sym,
+        | trty (A.ArrayTy (sym, pos)) = Ty.ARRAY (lookActualType(tenv, sym,
         pos), ref ())
     in
       trty ty
     end
+    
+    and transProg (exp) =
+    (
+    transExp(E.base_venv, E.base_tenv, exp);
+    ()
+    )
 end
