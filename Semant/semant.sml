@@ -299,28 +299,17 @@ struct
         {exp=(), ty=Ty.UNIT}
         )
       end
-    | trexp (A.IfExp {test, then', else', pos}) =
-      (case else' of
+    | trexp (A.IfExp {test=test, then'=then', else'=else_opt, pos=pos}) =
+      (case else_opt of
           NONE =>
-	      let
-	          val {exp=testExp, ty=testTy} = transExp (venv, tenv, test)
-		  val {exp=thenExp, ty=thenTy} = transExp (venv, tenv, then')
-	      in
-	          (checkInt(testTy, pos, "Invalid TEST expression type, INT expected");
-		  checkNoValue(thenTy, pos, "Invalid THEN expression type, UNIT expected");
+	          (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+		  checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
 		  {exp=(), ty=Ty.UNIT})
-	      end
-	  | SOME =>
-	      let
-	          val {exp=testExp, ty=testTy} = transExp (venv, tenv, test)
-		  val {exp=thenExp, ty=thenTy} = transExp (venv, tenv, then')
-		  val {exp=elseExp, ty=elseTy} = transExp (venv, tenv, else')
-	      in
-	          (checkInt(testTy, pos, "Invalid TEST expression type, INT expected");
-		  checkNoValue(thenExp, pos, "Invalid THEN expression type, UNIT expected");
-		  checkNoValue(elseExp, pos, "Invalid ELSE expression type, UNIT expected");
-		  {exp=(), ty=Tu.UNIT})
-	      end
+	  | SOME(else') =>
+	          (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+		  checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
+		  checkNoValue(trexp else', pos, "Invalid ELSE expression type, UNIT expected");
+		  {exp=(), ty=Ty.UNIT})
       )
 	(* ... *)
     in
