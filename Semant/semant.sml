@@ -61,35 +61,16 @@ struct
        | (_, _) => false 
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
-    if compareAnyType(lhs, rhs) then
+    if not (compareAnyType(lhs, rhs)) then
       errCurry msg
     else
       ()
 
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
-      if eqFun(lhs, rhs) then
+      if not (eqFun(lhs, rhs)) then
           errCurry msg
       else
           ()
-
-  fun assertDecTypeEq (ty: Ty.ty, decTy: Ty.ty, msgTmpl, pos) =
-    assertTypeEq(ty, decTy, err pos, "type mismatch")
-    (*
-      case ty of
-          Ty.NIL => assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record")
-        | Ty.RECORD =>
-          (
-            assertEq(isValidRecord ty, true, op =, err pos, msgTmpl ^ "Invalid record");
-            assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record");
-            (* structural equal *)
-            assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "record type mismatch")
-          )
-        | Ty.ARRAY =>
-          (* structural equal *)
-          assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "array type mismatch")
-        | otherTy => assertEq(ty, decTy, compareAnyType, err pos, msgTmpl ^
-        "type mismatch - " ^ (Ty.name ty) ^ " and " ^ (Ty.name decTy))
-    *)
 
   fun isValidRecord (Ty.RECORD(symTys, _)) =
       let 
@@ -314,10 +295,33 @@ struct
       in
         (
         assertEq(!loopLevel, 0, op >, err pos, "Invalid BREAK");
-        assertEq(!berakNum, 1, op =, err pos, "Can only BREAK once for a single loop");
+        assertEq(!breakNum, 1, op =, err pos, "Can only BREAK once for a single loop");
         {exp=(), ty=Ty.UNIT}
         )
       end
+    | trexp (A.IfExp {test, then', else', pos}) =
+      (case else' of
+          NONE =>
+	      let
+	          val {exp=testExp, ty=testTy} = transExp (venv, tenv, test)
+		  val {exp=thenExp, ty=thenTy} = transExp (venv, tenv, then')
+	      in
+	          (checkInt(testTy, pos, "Invalid TEST expression type, INT expected");
+		  checkNoValue(thenTy, pos, "Invalid THEN expression type, UNIT expected");
+		  {exp=(), ty=Ty.UNIT})
+	      end
+	  | SOME =>
+	      let
+	          val {exp=testExp, ty=testTy} = transExp (venv, tenv, test)
+		  val {exp=thenExp, ty=thenTy} = transExp (venv, tenv, then')
+		  val {exp=elseExp, ty=elseTy} = transExp (venv, tenv, else')
+	      in
+	          (checkInt(testTy, pos, "Invalid TEST expression type, INT expected");
+		  checkNoValue(thenExp, pos, "Invalid THEN expression type, UNIT expected");
+		  checkNoValue(elseExp, pos, "Invalid ELSE expression type, UNIT expected");
+		  {exp=(), ty=Tu.UNIT})
+	      end
+      )
 	(* ... *)
     in
       trexp exp
@@ -327,6 +331,7 @@ struct
       let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
+                  assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = ty}),
                     tenv = tenv
@@ -337,7 +342,7 @@ struct
                   val msgTmpl = "VarDec: "
                   val decTy = lookActualType(tenv, s, pos)
               in
-                  assertDecTypeEq(ty, decTy, msgTmpl, pos);
+                  assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name ^ " - type mismatch");
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
                     tenv = tenv
@@ -407,7 +412,7 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
-                          assertDecTypeEq(bodyTy, resultTy, msgTmpl, pos);
+                          assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch");
                           venv
                       end
                     | trFunDec (venv, nil) = venv
