@@ -133,11 +133,11 @@ struct
       
 
 
-  fun checkInt ({exp, ty}, pos) = 
-    assertEq (ty, Ty.INT, op =, err pos, "integer required")
+  fun checkInt ({exp, ty}, pos, extra_info) = 
+    assertEq (ty, Ty.INT, op =, err pos, "integer required" ^ extra_info)
   
-  fun checkNoValue ({exp, ty}, pos) =
-    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required")
+  fun checkNoValue ({exp, ty}, pos, extra_info) =
+    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required" ^ extra_info)
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
@@ -181,7 +181,7 @@ struct
           case lvalue_ty of
             Ty.ARRAY (ty, uni) =>
               (
-              checkInt(exp, pos);
+              checkInt(exp, pos, "");
               {exp=(), ty=ty}          
               )
           | _ => err pos "Array required"
@@ -193,8 +193,8 @@ struct
   fun transExp(venv, tenv, exp) =
   let fun trexp (A.OpExp{left, oper, right, pos}) =
       (
-      checkInt(trexp left, pos);
-      checkInt(trexp right, pos);
+      checkInt(trexp left, pos, "");
+      checkInt(trexp right, pos, "");
       {exp=(), ty=Ty.INT}
       )
     | trexp (A.IntExp int) =
@@ -219,16 +219,16 @@ struct
       )
     | trexp (A.ForExp {id, escape, lo, hi, body, pos}) =
       (
-      checkInt(trexp lo, pos);
-      checkInt(trexp hi, pos);
+      checkInt(trexp lo, pos, "");
+      checkInt(trexp hi, pos, "");
       let
-	val _ = loopLevel := loopLevel + 1
-	val venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
-	(*body check required*)
-	val _ = loopLevel := loopLevel - 1
-	val _ = breakNum := 0
+        val _ = loopLevel := loopLevel + 1
+        val venv' = S.enter(venv, id, E.VarEntry{ty = Ty.UNIT})
+        (*body check required*)
+        val _ = loopLevel := loopLevel - 1
+        val _ = breakNum := 0
       in
-        checkNoValue(transExp(venv', tenv, body)) (* ensure id not re-assigned in the body scope *)
+        checkNoValue(transExp(venv', tenv, body), "") (* ensure id not re-assigned in the body scope *)
       end;
       {exp = (), ty=Ty.UNIT}
       )
@@ -249,81 +249,48 @@ struct
       )
     | trexp (A.ArrayExp {typ, size, init, pos}) =
       let
-	    val sizeTy = trexp size
-	    val initTy = trexp init
+	    val {exp=_, ty=initTy} = trexp init
+        val array_ele_ty = lookActualType(tenv, typ, pos)
 	  in
-	    case S.look(tenv, typ) of
-	      SOME (ty) =>
-            (
-	        case actual_ty(ty) of
-	          Ty.ARRAY(baseTy, u) =>
-		        if checkInt(sizeTy, pos) then
-		          if assertTypeEq(baseTy, initTy, err pos, "") then
-		            {exp=(), ty=Ty.ARRAY(baseTy, u)}
-		          else
-                    (
-		            err pos ("Array initial type does not match base type");
-		            {exp=(), ty=Ty.UNIT}
-                    )
-		        else
-                  (
-		          err pos ("Array size must be INT");
-		          {exp=(), ty=Ty.UNIT}
-                  )
-		    | _ => 
-              (
-              err pos ("Return type must be an ARRAY");
-		      {exp=(), ty=Ty.UNIT}
-              )
-            )
-	    | _ => 
-            (
-            err pos ("Unable to define ARRAY based on current type");
-	      	{exp=(), ty=Ty.UNIT}
-            )
+        (
+        checkInt(trexp size, pos, "Array size must be INT");
+        assertTypeEq(array_ele_ty, initTy, err pos, "Array initial type does not match base type");
+        {exp=(), ty=Ty.ARRAY(array_ele_ty, ())};
+        )
 	  end
     | trexp (A.AssignExp {var, exp, pos}) =
       let
-	  val {var=vExp, ty=varTy} = transVar (venv, tenv, var)
-          val {exp=eExp, ty=expTy} = transExp (venv, tenv, exp)
+	    val {var=vExp, ty=varTy} = transVar (venv, tenv, var)
+        val {exp=eExp, ty=expTy} = transExp (venv, tenv, exp)
       in
-	  if (assertTypeEq(varTy, expTy, err pos, "") then
-	      {exp=(), ty=Ty.UNIT}
-	  else
-	      (err pos ("Assignment type mismatch");
-	      {exp=(), ty=Ty.UNIT})
+        (
+	    assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
+	    {exp=(), ty=Ty.UNIT}
+        )
       end
     | trexp (A.WhileExp {test, body, pos}) =
       let
-          val _ = loopLevel := !loopLevel + 1
-	  val {exp=tExp, ty=testTy} = transExp (venv, tenv, test)
-	  val {exp=bExp, ty=bodyTy} = transExp (venv, tenv, body)
-	  val _ = loopLevel := !loopLevel - 1
-	  val _ = breakNum := 0
+        val _ = loopLevel := !loopLevel + 1
+	    val {exp=tExp, ty=testTy} = transExp (venv, tenv, test)
+	    val {exp=bExp, ty=bodyTy} = transExp (venv, tenv, body)
+	    val _ = loopLevel := !loopLevel - 1
+	    val _ = breakNum := 0
       in
-	  if checkInt(testTy, pos) then
-	      if checkNoValue(bodyTy, pos) then
-	          {exp=(), ty=Ty.UNIT}
-	      else
-	          (err pos ("Invalid WHILE loop body type, UNIT expected");
-		  {exp=(), ty=Ty.UNIT})
-	  else
-	      (err pos ("Invalid WHILE loop test type, INT expected");
-	      {exp=(), ty=Ty.UNIT})
+	    (
+        checkInt(testTy, pos, "Invalid WHILE loop test type, INT expected");
+	    checkNoValue(bodyTy, pos, "Invalid WHILE loop body type, UNIT expected");
+	    {exp=(), ty=Ty.UNIT}
+        )
       end
     | trexp (A.BreakExp pos) =
       let
-         val _ = breakNum = !breakNum + 1
+        val _ = breakNum = !breakNum + 1
       in
-         if !loopLevel > 0 then
-	     if !breakNum = 1 then
-	         {exp=(), ty=Ty.UNIT}
-	     else
-	         (err pos ("Cannot BREAK twice for a single loop");
-		 {exp=(), ty=Ty.UNIT})
-	 else
-	     (err pos ("Invalid BREAK");
-	     {exp=(), ty=Ty.UNIT})
+        (
+        assertEq(!loopLevel, 0, op >, err pos, "Invalid BREAK");
+        assertEq(!berakNum, 1, op =, err pos, "Can only BREAK once for a single loop");
+        {exp=(), ty=Ty.UNIT}
+        )
       end
 	(* ... *)
     in
