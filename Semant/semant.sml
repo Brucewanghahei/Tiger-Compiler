@@ -296,7 +296,7 @@ struct
                   val msgTmpl = "VarDec: "
                   val decTy = lookActualType(tenv, s, pos)
               in
-                  assertTypeEq(ty, decTy, msgTmpl, pos);
+                  assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name ^ " - type mismatch");
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
                     tenv = tenv
@@ -364,7 +364,7 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty transExp(venv', tenv, body)
                       in
-                          assertTypeEq(bodyTy, resultTy, msgTmpl, pos);
+                          assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch");
                           venv
                       end
                     | trFunDec (venv, nil) = venv
