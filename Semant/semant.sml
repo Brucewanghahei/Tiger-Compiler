@@ -66,21 +66,6 @@ struct
       else
           ()
 
-  fun assertDecTypeEq (ty: Ty.ty, decTy: Ty.ty, msgTmpl, pos) =
-      case ty of
-          Ty.NIL => assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record")
-        | Ty.RECORD =>
-          (
-            assertEq(isValidRecord ty, true, op =, err pos, msgTmpl ^ "Invalid record");
-            assertEq(isValidRecord decTy, true, op =, err pos, msgTmpl ^ "Invalid record");
-            (* structural equal *)
-            assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "record type mismatch")
-          )
-        | Ty.ARRAY =>
-          (* structural equal *)
-          assertEq(#1 ty, #1 decTy, op =, err pos, msgTmpl ^ "array type mismatch")
-        | otherTy => assertEq(ty, decTy, compareAnyType, err pos, msgTmpl ^ "type mismatch - " ^ (S.name s))
-
   fun isValidRecord Ty.RECORD(symTys, _) =
       let 
           fun f hd::tl =
@@ -311,7 +296,7 @@ struct
                   val msgTmpl = "VarDec: "
                   val decTy = lookActualType(tenv, s, pos)
               in
-                  assertDecTypeEq(ty, decTy, msgTmpl, pos);
+                  assertTypeEq(ty, decTy, msgTmpl, pos);
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
                     tenv = tenv
@@ -379,7 +364,7 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty transExp(venv', tenv, body)
                       in
-                          assertDecTypeEq(bodyTy, resultTy, msgTmpl, pos);
+                          assertTypeEq(bodyTy, resultTy, msgTmpl, pos);
                           venv
                       end
                     | trFunDec (venv, nil) = venv
