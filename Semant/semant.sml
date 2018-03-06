@@ -55,13 +55,13 @@ struct
        | (_, _) => false 
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
-    if compareAnyType(lhs, rhs) then
+    if not compareAnyType(lhs, rhs) then
       errCurry msg
     else
       ()
 
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
-      if eqFun(lhs, rhs) then
+      if not eqFun(lhs, rhs) then
           errCurry msg
       else
           ()
@@ -286,6 +286,7 @@ struct
       let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
               in
+                  assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly")
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = ty}),
                     tenv = tenv
