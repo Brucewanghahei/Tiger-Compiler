@@ -311,7 +311,34 @@ struct
 		  checkNoValue(trexp else', pos, "Invalid ELSE expression type, UNIT expected");
 		  {exp=(), ty=Ty.UNIT})
       )
-	(* ... *)
+    | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
+      let
+          val fieldsTy = lookActualType(tenv, typ, pos)
+	  val names1 = map #1 fields1
+	  val types1 = map actual_ty (map #2 fields1)
+      in
+	  (case fieldsTy of
+	      Types.RECORD(fields2, unique) =>
+	          let
+		      val names2 = map #1 fields2
+		      val types2 = map actual_ty (map #2 fields2)
+		  in
+		      if names1 = names2 then
+		          if (ListPair.all
+			      (fn (type1, type2) => compareAnyType (type1, type2))
+			      (types1, types2))
+			  then
+			      {exp=(), ty=Ty.UNIT}
+			  else
+			      (err pos ("Inconsistent fields type: " ^ S.name typ);
+			      {exp=(), ty=Ty.UNIT})
+		      else
+		          (err pos ("Inconsistent fields type: " ^ S.name typ);
+			  {exp=(), ty=Ty.UNIT})
+		  end
+	      | _ => (err pos ("Invalid RECORD type: " ^ S.name typ);
+	      {exp=(), ty=Ty.UNIT}))
+      end
     in
       trexp exp
     end
