@@ -344,7 +344,7 @@ struct
     end
 
     and transDec (venv:venv, tenv:tenv, dec) =
-      let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
+      let fun trdec (A.VarDec{name, typ = NONE, init, pos, ...}) =
               let val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
               in
@@ -354,7 +354,7 @@ struct
                     tenv = tenv
                   }
               end
-            | trdec (A.VarDec{name, typ = SOME(s, _), init, pos}) = 
+            | trdec (A.VarDec{name, typ = SOME(s, _), init, pos, ...}) = 
               let val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
                   val decTy = lookActualType(tenv, s, pos)
@@ -369,7 +369,7 @@ struct
               let
                   val msgTmpl = "TypeDec: "
                   (* first pass to scan headers*)
-                  fun trTyDecHeader (tenv:tenv, {name}::tl) =
+                  fun trTyDecHeader (tenv:tenv, {name, ...}::tl) =
                       let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
                       in
                           trTyDecHeader(tenv', tl)
@@ -394,16 +394,16 @@ struct
                         venv = venv,
                         tenv = tenv
                       }
-                  val tenv' = trTyDecHeader(tenv, map (fn A.TypeDec{name} => name) tydecs)
+                  val tenv' = trTyDecHeader(tenv, tydecs)
               in
                   trTyDecBody(tenv', tydecs)
               end
             | trdec (A.FunctionDec fundecs) =
               let
                   val msgTmpl = "FunDec: "
-                  fun trParams params = map (fn {name, typ, pos} =>
-                                                {name = name, ty = lookActualType(tenv, typ, pos)})
-                                            params
+                  fun trParams params = map (fn {name, typ, pos, escape} =>
+                                                               {name = name, ty = lookActualType(tenv, typ, pos)})
+                                                           params
                   (* first pass to scan headers*)
 
                   fun trResult NONE = Ty.NIL
@@ -413,8 +413,7 @@ struct
                         | t => t
                         | _ => Ty.NIL
 
-                  fun trFunDecHeader (venv:venv, {name, params, result,
-                    pos}::tl: A.fundec list) =
+                  fun trFunDecHeader (venv:venv, {name, params, result, body, pos}::tl) =
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
@@ -428,8 +427,7 @@ struct
                   val venv' = trFunDecHeader(venv, fundecs)
 
                   (* second pass to translate body*)
-                  fun trFunDec (venv:venv, {name, params, result, body,
-                    pos}::tl: A.fundec list) =
+                  fun trFunDec (venv:venv, {name, params, result, body, pos}::tl: A.fundec list) =
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
