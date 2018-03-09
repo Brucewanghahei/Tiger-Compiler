@@ -400,7 +400,7 @@ struct
                   (* first pass to scan headers*)
 
                   fun trResult NONE = Ty.NIL
-                    | trResult SOME(s, pos) = 
+                    | trResult (SOME(s, pos)) = 
                       case lookActualType(tenv, s, pos) of
                           Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
                         | t => t
