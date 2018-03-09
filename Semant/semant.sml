@@ -346,6 +346,7 @@ struct
     and transDec (venv:venv, tenv:tenv, dec) =
       let fun trdec (A.VarDec{name, typ = NONE, init, pos}) =
               let val {exp, ty} = transExp(venv, tenv, init)
+                  val msgTmpl = "VarDec: "
               in
                   assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
                   {
@@ -366,6 +367,7 @@ struct
               end
             | trdec (A.TypeDec(tydecs)) =
               let
+                  val msgTmpl = "TypeDec: "
                   (* first pass to scan headers*)
                   fun trTyDecHeader (tenv:tenv, {name}::tl) =
                       let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
@@ -380,7 +382,7 @@ struct
                       in
                         case lookActualType(tenv, name) of
                               Ty.NAME (_, SOME symbolTyRef) => (symbolTyRef := actualTy; ())
-                            | _ => impossible (msgTmpl ^ S.name name " not found in header"); ref NONE
+                            | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header"); ref NONE
                           ;
                             tenv
                       end
@@ -397,11 +399,12 @@ struct
                                             params
                   (* first pass to scan headers*)
 
-                  fun trResult result = case result of
-                                            SOME(Ty.NIL, resultPos) => err pos (msgTmpl ^ "return value cannot be given as nil")
-                                          | SOME(resultName, resultPos) => lookActualType(tenv, resultName, resultPos)
-                                          (* what to do when return type is not given? *)
-                                          | NONE => Ty.NIL
+                  fun trResult NONE = Ty.NIL
+                    | trResult SOME(s, pos) = 
+                      case lookActualType(tenv, s, pos) of
+                          Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
+                        | t => t
+                        | _ => Ty.NIL
 
                   fun trFunDecHeader (venv:venv, {name, params, result,
                     pos}::tl: A.fundec list) =
@@ -428,6 +431,7 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
+                          (* todo: further check *)
                           assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch");
                           venv
                       end
