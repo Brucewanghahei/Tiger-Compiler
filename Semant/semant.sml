@@ -1,10 +1,3 @@
-use "env.sml";
-use "types.sml";
-use "symbol.sml";
-use "absyn.sml";
-use "transalte.sml";
-use "errormsg.sml";
-
 signature SEMANT =
 sig
   type venv
