@@ -380,14 +380,21 @@ struct
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
                       let val actualTy = transTy(tenv, ty)
                       in
-                        case lookActualType(tenv, name) of
-                              Ty.NAME (_, SOME symbolTyRef) => (symbolTyRef := actualTy; ())
-                            | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header"); ref NONE
+                        case lookActualType(tenv, name, pos) of
+                              (Ty.NAME (_, SOME symbolTyRef)) => (symbolTyRef := actualTy; ())
+                            | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header")
                           ;
-                            tenv
+                            {
+                              venv = venv,
+                              tenv = tenv
+                            }
                       end
-                    | trTyDecBody (tenv:tenv, nil) = tenv
-                  val tenv' = trTyDecHeader(tenv, tydecs)
+                    | trTyDecBody (tenv:tenv, nil) =
+                      {
+                        venv = venv,
+                        tenv = tenv
+                      }
+                  val tenv' = trTyDecHeader(tenv, map (fn A.TypeDec{name} => name) tydecs)
               in
                   trTyDecBody(tenv', tydecs)
               end
