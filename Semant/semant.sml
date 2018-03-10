@@ -59,6 +59,11 @@ struct
     else
       ()
 
+  fun assertTypeMatch (ty, decTy, errCurry, msg) =
+      case (ty, decTy) of
+          (Ty.NIL, Ty.RECORD(_, _)) => ()
+        | _ => assertTypeEq(ty, decTy, errCurry, msg)
+
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
       if not (eqFun(lhs, rhs)) then
           errCurry msg
@@ -404,7 +409,6 @@ struct
                       case lookActualType(tenv, s, pos) of
                           Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
                         | t => t
-                        | _ => Ty.NIL
 
                   fun trFunDecHeader (venv:venv, {name, params, result, body, pos}::tl) =
                       let
@@ -429,8 +433,11 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
-                          (* todo: further check *)
-                          assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch");
+                          if resultTy <> Ty.NIL then
+                              assertTypeMatch(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
+                          else
+                              ()
+                        ;
                           venv
                       end
                     | trFunDec (venv, nil) = venv
