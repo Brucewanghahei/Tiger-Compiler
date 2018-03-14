@@ -1,8 +1,10 @@
-use "parsetest.sml";
-use "semant.sml";
-
 structure Main = 
 struct
-  val absyn_exp = Parse.parse filename
-  fun transProg(absyn_exp) = ()
+  fun compile filename =
+  let
+    val absyn_exp = Parse.parse filename
+    val _ = Semant.transProg(absyn_exp)
+  in
+    ()
+  end
 end

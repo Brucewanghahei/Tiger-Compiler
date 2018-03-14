@@ -101,7 +101,7 @@ struct
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
          SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty)}
-       | NONE => (err pos ("Undefined variable " ^ (S.name symbol)); {exp=(), ty=Ty.INT}) 
+       | _ => (err pos ("Undefined variable " ^ (S.name symbol)); {exp=(), ty=Ty.INT}) 
 
   (* use Ty.UNIT as dummy return value *)
   fun lookupRecordFieldType(sym_ty_list:((S.symbol * Ty.ty) list), id:S.symbol, pos) =
@@ -203,7 +203,7 @@ struct
     | trexp (A.LetExp {decs, body, pos}) =
       let
         val {venv=venv', tenv=tenv'} =
-        transDec(venv, tenv, decs)
+        foldl (fn (a,b) => transDec(#venv b, #tenv b, a)) {venv=venv, tenv=tenv} decs
       in
         transExp(venv', tenv', body)
       end
@@ -256,35 +256,35 @@ struct
       )
     | trexp (A.ArrayExp {typ, size, init, pos}) =
       let
-	    val {exp=_, ty=initTy} = trexp init
+        val {exp=_, ty=initTy} = trexp init
         val array_ele_ty = lookActualType(tenv, typ, pos)
-	  in
+      in
         (
         checkInt(trexp size, pos, "Array size must be INT");
         assertTypeEq(array_ele_ty, initTy, err pos, "Array initial type does not match base type");
         {exp=(), ty=Ty.ARRAY(array_ele_ty, ref ())}
         )
-	  end
+      end
     | trexp (A.AssignExp {var, exp, pos}) =
       let
-	    val {exp=vExp, ty=varTy} = transVar (venv, tenv, var)
+        val {exp=vExp, ty=varTy} = transVar (venv, tenv, var)
         val {exp=eExp, ty=expTy} = trexp exp
       in
         (
-	    assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
-	    {exp=(), ty=Ty.UNIT}
+        assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
+        {exp=(), ty=Ty.UNIT}
         )
       end
     | trexp (A.WhileExp {test, body, pos}) =
       let
         val _ = loopLevel := !loopLevel + 1
-	    val _ = loopLevel := !loopLevel - 1
-	    val _ = breakNum := 0
+        val _ = loopLevel := !loopLevel - 1
+        val _ = breakNum := 0
       in
-	    (
+        (
         checkInt(trexp test, pos, "Invalid WHILE loop test type, INT expected");
-	    checkNoValue(trexp body, pos, "Invalid WHILE loop body type, UNIT expected");
-	    {exp=(), ty=Ty.UNIT}
+        checkNoValue(trexp body, pos, "Invalid WHILE loop body type, UNIT expected");
+        {exp=(), ty=Ty.UNIT}
         )
       end
     | trexp (A.BreakExp pos) =
@@ -300,48 +300,50 @@ struct
     | trexp (A.IfExp {test=test, then'=then', else'=else_opt, pos=pos}) =
       (case else_opt of
           NONE =>
-	          (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-		  checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-		  {exp=(), ty=Ty.UNIT})
-	  | SOME(else') =>
-	          (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-		  checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-		  checkNoValue(trexp else', pos, "Invalid ELSE expression type, UNIT expected");
-		  {exp=(), ty=Ty.UNIT})
+              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+          checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
+          {exp=(), ty=Ty.UNIT})
+      | SOME(else') =>
+              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+          checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
+          checkNoValue(trexp else', pos, "Invalid ELSE expression type, UNIT expected");
+          {exp=(), ty=Ty.UNIT})
       )
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
           val fieldsTy = lookActualType(tenv, typ, pos)
-	  val names1 = map #1 fields1
-	  val types1 = map actual_ty (map #2 fields1)
+          val fields1 = map (fn (symbol,exp,pos) => (symbol,
+          (#ty (trexp(exp))))) fields 
+          val names1 = map #1 fields1
+          val types1 = map actual_ty (map #2 fields1)
       in
-	  (case fieldsTy of
-	      Types.RECORD(fields2, unique) =>
-	          let
-		      val names2 = map #1 fields2
-		      val types2 = map actual_ty (map #2 fields2)
-		  in
-		      if names1 = names2 then
-		          if (ListPair.all
-			      (fn (type1, type2) => compareAnyType (type1, type2))
-			      (types1, types2))
-			  then
-			      {exp=(), ty=Ty.UNIT}
-			  else
-			      (err pos ("Inconsistent fields type: " ^ S.name typ);
-			      {exp=(), ty=Ty.UNIT})
-		      else
-		          (err pos ("Inconsistent fields type: " ^ S.name typ);
-			  {exp=(), ty=Ty.UNIT})
-		  end
-	      | _ => (err pos ("Invalid RECORD type: " ^ S.name typ);
-	      {exp=(), ty=Ty.UNIT}))
+      (case fieldsTy of
+          Types.RECORD(fields2, unique) =>
+          let
+              val names2 = map #1 fields2
+              val types2 = map actual_ty (map #2 fields2)
+          in
+              if names1 = names2 then
+                  if (ListPair.all
+                      (fn (type1, type2) => compareAnyType (type1, type2))
+                      (types1, types2))
+                  then
+                      {exp=(), ty=fieldsTy}
+                  else
+                      (err pos ("Inconsistent fields type: " ^ S.name typ);
+                      {exp=(), ty=Ty.UNIT})
+              else
+                  (err pos ("Inconsistent fields type: " ^ S.name typ);
+                  {exp=(), ty=Ty.UNIT})
+          end
+          | _ => (err pos ("Invalid RECORD type: " ^ S.name typ);
+          {exp=(), ty=Ty.UNIT}))
       end
     in
       trexp exp
     end
 
-    and transDec (venv:venv, tenv:tenv, dec) =
+    and transDec (venv:venv, tenv:tenv, dec:A.dec) =
       let fun trdec (A.VarDec{name, typ = NONE, init, pos, ...}) =
               let val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
