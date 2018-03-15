@@ -90,12 +90,17 @@ struct
   fun actual_ty(ty) =
       case Ty.whatis ty of
           SOME t => t
-        | NONE => (Err.impossible ("Type " ^ (Ty.name ty) ^ "is NONE"); Ty.NIL)
+        | NONE => (Err.impossible ("Type " ^ (Ty.name ty) ^ " is NONE"); Ty.NIL)
 
   fun lookActualType (tenv:tenv, symbol:S.symbol, pos) =
       case S.look(tenv, symbol) of
           SOME ty => actual_ty ty
-        | NONE => (err pos ("Type " ^ S.name symbol ^ "not found"); Ty.NIL)
+        | NONE => (err pos ("Type " ^ S.name symbol ^ " not found"); Ty.NIL)
+
+  fun lookHeaderType (tenv:tenv, symbol:S.symbol) =
+      case S.look(tenv, symbol) of
+          SOME ty => ty
+        | NONE => (Err.impossible (" Header type " ^ S.name symbol ^ " not found"); Ty.NIL)
 
   (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
@@ -137,7 +142,7 @@ struct
   fun lookupFunEntry (venv:venv, func:S.symbol, pos) = 
     case S.look(venv, func) of
          SOME fun_entry => fun_entry
-       | NONE => (err pos ("Function " ^ (S.name func) ^ "not found"); E.FunEntry {formals = [], result = Ty.UNIT})
+       | NONE => (err pos ("Function " ^ (S.name func) ^ " not found"); E.FunEntry {formals = [], result = Ty.UNIT})
 
   fun checkFuncParams (formals: Ty.ty list, args: Ty.ty list, pos) = 
   let
@@ -369,18 +374,14 @@ struct
               let
                   val msgTmpl = "TypeDec: "
                   (* first pass to scan headers*)
-                  fun trTyDecHeader (tenv:tenv, {name, ty, pos}::tl) =
-                      let val tenv' = S.enter(tenv, name, Types.NAME(name, ref NONE))
-                      in
-                          trTyDecHeader(tenv', tl)
-                      end
-                    | trTyDecHeader (tenv, nil) = tenv
+                  fun trTyDecHeader (tenv:tenv, tydecs) =
+                      foldl (fn ({name, ty, pos}, acc) => S.enter(acc, name, Types.NAME(name, ref NONE))) tenv tydecs
                   (* second pass to fill ref *)
 
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
                       let val actualTy = transTy(tenv, ty)
                       in
-                        case lookActualType(tenv, name, pos) of
+                        case lookHeaderType(tenv, name) of
                             (Ty.NAME (_, tyref)) => tyref := SOME actualTy
                             | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header")
                           ;
