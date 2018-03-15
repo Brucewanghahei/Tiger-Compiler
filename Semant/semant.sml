@@ -262,12 +262,16 @@ struct
     | trexp (A.ArrayExp {typ, size, init, pos}) =
       let
         val {exp=_, ty=initTy} = trexp init
-        val array_ele_ty = lookActualType(tenv, typ, pos)
+        val actTy = lookActualType(tenv, typ, pos)
       in
         (
         checkInt(trexp size, pos, "Array size must be INT");
-        assertTypeEq(array_ele_ty, initTy, err pos, "Array initial type does not match base type");
-        {exp=(), ty=Ty.ARRAY(array_ele_ty, ref ())}
+	(case (lookActualType(tenv, typ, pos)) of
+	    Ty.ARRAY(actTy, unique) =>
+	        (assertTypeEq(actTy, initTy, err pos, "Type mismatch between initial type and array type");
+		{exp=(), ty=Ty.ARRAY(actTy, unique)})
+	    | _ => (err pos ("Invalid ARRAY type");
+	        {exp=(), ty=Ty.UNIT}))
         )
       end
     | trexp (A.AssignExp {var, exp, pos}) =
