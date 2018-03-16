@@ -97,10 +97,11 @@ struct
           SOME ty => actual_ty ty
         | NONE => (err pos ("Type " ^ S.name symbol ^ " not found"); Ty.NIL)
 
-  fun lookHeaderType (tenv:tenv, symbol:S.symbol) =
+  (* look type until Ty.NAME *)
+  fun lookType (tenv:tenv, symbol:S.symbol, pos) =
       case S.look(tenv, symbol) of
-          SOME ty => ty
-        | NONE => (Err.impossible (" Header type " ^ S.name symbol ^ " not found"); Ty.NIL)
+          NONE => (err pos ("Type " ^ S.name symbol ^ " not found"); Ty.NIL)
+        | SOME ty => ty
 
   (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
@@ -383,16 +384,13 @@ struct
                   (* second pass to fill ref *)
 
                   fun trTyDecBody (tenv, {name, ty, pos}::tl) =
-                      let val actualTy = transTy(tenv, ty)
+                      let val tyHeader = transTy(tenv, ty)
                       in
-                        case lookHeaderType(tenv, name) of
-                            (Ty.NAME (_, tyref)) => tyref := SOME actualTy
+                        case lookType(tenv, name, pos) of
+                            (Ty.NAME (_, tyref)) => tyref := SOME tyHeader
                             | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header")
-                          ;
-                            {
-                              venv = venv,
-                              tenv = tenv
-                            }
+                        ;
+                          trTyDecBody(tenv, tl)
                       end
                     | trTyDecBody (tenv:tenv, nil) =
                       {
@@ -460,10 +458,10 @@ struct
       
     and transTy (tenv:tenv, ty:A.ty) =
     let
-      fun trty (A.NameTy (sym, pos)) = lookActualType(tenv, sym, pos)
+      fun trty (A.NameTy (sym, pos)) = lookType(tenv, sym, pos)
         | trty (A.RecordTy (field_list)) = Ty.RECORD ((map (fn {name, escape, typ, pos} =>
-            (name, lookActualType(tenv, typ, pos))) field_list), ref ()) 
-        | trty (A.ArrayTy (sym, pos)) = Ty.ARRAY (lookActualType(tenv, sym,
+            (name, lookType(tenv, typ, pos))) field_list), ref ()) 
+        | trty (A.ArrayTy (sym, pos)) = Ty.ARRAY (lookType(tenv, sym,
         pos), ref ())
     in
       trty ty
