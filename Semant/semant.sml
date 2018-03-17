@@ -414,16 +414,16 @@ struct
                           Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
                         | t => t
 
-                  fun trFunDecHeader (venv:venv, {name, params, result, body, pos}::tl) =
-                      let
-                          val resultTy = trResult result
-                          val paramNameTys = trParams params
-                          val venv' = S.enter(venv, name,
-                                              E.FunEntry{formals = map #ty paramNameTys, result = resultTy})
-                      in
-                          trFunDecHeader(venv', tl)
-                      end
-                    | trFunDecHeader (venv, nil) = venv
+                  fun trFunDecHeader (venv:venv, decs) =
+                      foldl (fn ({name, params, result, body, pos}, acc) =>
+                                let
+                                    val resultTy = trResult result
+                                    val paramNameTys = trParams params
+                                in
+                                    S.enter(venv, name, E.FunEntry{formals = map #ty paramNameTys, result = resultTy})
+                                end)
+                            venv
+                            decs
 
                   val venv' = trFunDecHeader(venv, fundecs)
 
