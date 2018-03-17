@@ -419,7 +419,7 @@ struct
                                     val resultTy = trResult result
                                     val paramNameTys = trParams params
                                 in
-                                    S.enter(venv, name, E.FunEntry{formals = map #ty paramNameTys, result = resultTy})
+                                    S.enter(acc, name, E.FunEntry{formals = map #ty paramNameTys, result = resultTy})
                                 end)
                             venv
                             decs
