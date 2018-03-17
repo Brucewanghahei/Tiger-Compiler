@@ -40,6 +40,8 @@ struct
        | (Ty.INT, Ty.INT) => true
        | (Ty.STRING, Ty.STRING) => true
        | (Ty.UNIT, Ty.UNIT) => true
+       | (Ty.NIL, Ty.RECORD(_, rhs_uni)) => true
+       | (Ty.RECORD(_, lhs_uni), Ty.NIL) => true
        | (Ty.RECORD(_, lhs_uni), Ty.RECORD(_, rhs_uni)) => lhs_uni = rhs_uni
        | (Ty.ARRAY(_, lhs_uni), Ty.ARRAY(_, rhs_uni)) => lhs_uni = rhs_uni
        | (Ty.NAME a, Ty.NAME b) =>
