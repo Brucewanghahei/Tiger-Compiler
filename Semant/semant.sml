@@ -314,9 +314,8 @@ struct
           {exp=(), ty=Ty.UNIT})
       | SOME(else') =>
               (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-          checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-          checkNoValue(trexp else', pos, "Invalid ELSE expression type, UNIT expected");
-          {exp=(), ty=Ty.UNIT})
+	  assertEq(#ty (trexp then'), #ty (trexp else'), op =, err pos, "Invalid THEN expression type, UNIT expected");
+          {exp=(), ty=(#ty (trexp then'))})
       )
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
