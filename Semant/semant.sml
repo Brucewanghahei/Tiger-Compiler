@@ -114,7 +114,7 @@ struct
   (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
-         SOME(E.VarEntry{ty=ty, assignable= _}) => {exp=(), ty=actual_ty(ty)}
+         SOME(E.VarEntry{ty=ty, assignable= _}) => {exp=(), ty=ty}
        | _ => (err pos ("Undefined variable " ^ (S.name symbol)); {exp=(), ty=Ty.INT}) 
 
   (* use Ty.UNIT as dummy return value *)
