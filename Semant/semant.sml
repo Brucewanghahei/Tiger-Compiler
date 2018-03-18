@@ -33,7 +33,18 @@ struct
 
   val loopLevel = ref 0
   val breakNum = ref 0
-  
+
+  (* use Ty.NIL as dummy return value *)
+  fun actual_ty(ty) =
+      case Ty.whatis ty of
+          SOME t => t
+        | NONE => (Err.impossible ("Type " ^ (Ty.name ty) ^ " is NONE"); Ty.NIL)
+
+  fun lookActualType (tenv:tenv, symbol:S.symbol, pos) =
+      case S.look(tenv, symbol) of
+          SOME ty => actual_ty ty
+        | NONE => (err pos ("Type " ^ S.name symbol ^ " not found"); Ty.NIL)
+
   fun compareAnyType(lhs: Ty.ty, rhs: Ty.ty) =
     case (lhs, rhs) of
          (Ty.NIL, Ty.NIL) => true
@@ -56,7 +67,7 @@ struct
        | (_, _) => false 
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
-    if not (compareAnyType(lhs, rhs)) then
+    if not (compareAnyType(actual_ty(lhs), actual_ty(rhs))) then
       errCurry msg
     else
       ()
@@ -93,17 +104,6 @@ struct
           f syms
       end
     | isValidRecord _ = false
-
-  (* use Ty.NIL as dummy return value *)
-  fun actual_ty(ty) =
-      case Ty.whatis ty of
-          SOME t => t
-        | NONE => (Err.impossible ("Type " ^ (Ty.name ty) ^ " is NONE"); Ty.NIL)
-
-  fun lookActualType (tenv:tenv, symbol:S.symbol, pos) =
-      case S.look(tenv, symbol) of
-          SOME ty => actual_ty ty
-        | NONE => (err pos ("Type " ^ S.name symbol ^ " not found"); Ty.NIL)
 
   (* look type until Ty.NAME *)
   fun lookType (tenv:tenv, symbol:S.symbol, pos) =
@@ -207,11 +207,17 @@ struct
 
   and transExp(venv:venv, tenv:tenv, exp:A.exp) =
   let fun trexp (A.OpExp{left, oper, right, pos}) =
+      let
+        val {exp=_, ty=lty} = trexp left;
+        val {exp=_, ty=rty} = trexp right;
+      in
       (
-      checkInt(trexp left, pos, "left exp of the operand");
-      checkInt(trexp right, pos, "right exp of the operand");
-      {exp=(), ty=Ty.INT}
+        assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type"^
+        "mismatch\n" ^ "left operand: " ^ (Ty.name lty) ^"\nright operand: " ^
+        (Ty.name rty));
+        {exp=(), ty=Ty.INT}
       )
+      end
     | trexp (A.IntExp int) =
       {exp=(), ty=Ty.INT}
     | trexp (A.LetExp {decs, body, pos}) =
@@ -271,12 +277,13 @@ struct
       in
         (
         checkInt(trexp size, pos, "Array size must be INT");
-	(case (lookActualType(tenv, typ, pos)) of
-	    Ty.ARRAY(actTy, unique) =>
-	        (assertTypeEq(actual_ty(actTy), actual_ty(initTy), err pos, "Type mismatch between initial type and array type");
-		{exp=(), ty=Ty.ARRAY(actTy, unique)})
+	    (case (lookActualType(tenv, typ, pos)) of
+	      Ty.ARRAY(actTy, unique) =>
+	      (assertTypeEq(actual_ty(actTy), actual_ty(initTy), err pos, "Type mismatch between initial type and array type");
+		  {exp=(), ty=lookType(tenv, typ, pos)})
 	    | _ => (err pos ("Invalid ARRAY type");
-	        {exp=(), ty=Ty.UNIT}))
+	        {exp=(), ty=Ty.UNIT})
+        )
         )
       end
     | trexp (A.AssignExp {var, exp, pos}) =
@@ -346,7 +353,7 @@ struct
                       (fn (type1, type2) => compareAnyType (type1, type2))
                       (types1, types2))
                   then
-                      {exp=(), ty=fieldsTy}
+                      {exp=(), ty=lookType(tenv, typ, pos)}
                   else
                       (err pos ("Inconsistent fields type: " ^ S.name typ);
                       {exp=(), ty=Ty.UNIT})

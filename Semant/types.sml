@@ -28,12 +28,12 @@ struct
         (Symbol.name symbol) ^ ":" ^ (name ty)
       val body = foldl(fn (a,b) => b ^ ", " ^  map_symbolTy_to_string(a))("")(symbol_ty_list)
     in
-      "Record " ^ body
+      "Record: {" ^ String.extract(body, 2, NONE) ^ "}"
     end
   | name NIL = "Nil"
   | name INT = "Integer"
   | name STRING = "String"
-  | name (ARRAY (ty, uni)) = name ty
+  | name (ARRAY (ty, uni)) = "Array of " ^ (name ty)
   | name (NAME (sym, ty_opt_ref)) =
       (
       case ty_opt_ref of 
