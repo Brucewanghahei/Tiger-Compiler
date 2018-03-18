@@ -176,7 +176,7 @@ struct
         let
           val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
         in
-          case lvalue_ty of
+          case actual_ty lvalue_ty of
                Ty.RECORD (sym_ty_list, uni) =>
                {exp=(), ty=lookupRecordFieldType(sym_ty_list,
                sym, pos)}
