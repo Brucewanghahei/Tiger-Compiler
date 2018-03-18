@@ -412,7 +412,22 @@ struct
                                     
                   (* first pass to scan headers*)
                   fun trTyDecHeaders (tenv:tenv, tydecs) =
-                      foldl (fn ({name, ty, pos}, acc) => S.enter(acc, name, Types.NAME(name, ref NONE))) tenv tydecs
+                  let
+                    val temp_tenv = S.empty;
+                    val (new_tenv, tmp_tenv) =
+                      foldl (fn ({name, ty, pos}, (acc, acc_temp)) => (
+                      (
+                      case S.look(acc_temp, name) of
+                           SOME ty =>  (Err.impossible
+                            "same mutually recursive type name"; 
+                            acc_temp)
+                         | NONE => S.enter(acc_temp, name, Ty.UNIT)),
+                      S.enter(acc, name,
+                      Types.NAME(name, ref NONE)) )
+                      ) (tenv, temp_tenv) tydecs
+                  in
+                    new_tenv
+                  end
                   (* second pass to fill ref *)
 
                   fun trTyDecBody (tenv, {name, ty, pos}) =
