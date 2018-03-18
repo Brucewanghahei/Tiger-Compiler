@@ -61,11 +61,6 @@ struct
     else
       ()
 
-  fun assertTypeMatch (ty, decTy, errCurry, msg) =
-      case (ty, decTy) of
-          (Ty.NIL, Ty.RECORD(_, _)) => ()
-        | _ => assertTypeEq(ty, decTy, errCurry, msg)
-
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
       if not (eqFun(lhs, rhs)) then
           errCurry msg
@@ -79,7 +74,7 @@ struct
         case S.look(venv, symbol) of 
           SOME(E.VarEntry {ty=_, assignable=assignable}) => 
             assertEq(assignable, true, op =, err pos, "Variable not assignable")
-        | NONE => ()
+        | _ => ()
         )
     | _ => ()
 
@@ -146,10 +141,10 @@ struct
 
 
   fun checkInt ({exp, ty}, pos, extra_info) = 
-    assertEq (ty, Ty.INT, op =, err pos, "integer required " ^ extra_info)
+    assertEq (ty, Ty.INT, op =, err pos, "integer required: " ^ extra_info)
   
   fun checkNoValue ({exp, ty}, pos, extra_info) =
-    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required " ^ extra_info)
+    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required: " ^ extra_info)
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
@@ -164,7 +159,7 @@ struct
         (
         assertTypeEq(lhs_head, rhs_head, err pos,
         "Parameter Mismatch:\n" ^ "function parameter: " ^ (Ty.name lhs_head) ^
-        "input parameter: " ^ (Ty.name rhs_head));
+        " input parameter: " ^ (Ty.name rhs_head));
         f (lhs_tail, rhs_tail)
         )
       | f ([], []) = () 
@@ -228,7 +223,7 @@ struct
       end
     | trexp (A.SeqExp seq) =
       let
-        fun f seq =
+          fun f seq =
           case seq of
                [] => (
                  err ~1 "two or more expression in seq requried";
@@ -322,14 +317,18 @@ struct
       end
     | trexp (A.IfExp {test=test, then'=then', else'=else_opt, pos=pos}) =
       (case else_opt of
-          NONE =>
-              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-          checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-          {exp=(), ty=Ty.UNIT})
+           NONE =>
+           (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+            checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
+            {exp=(), ty=Ty.UNIT})
       | SOME(else') =>
-              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-	  assertEq(#ty (trexp then'), #ty (trexp else'), op =, err pos, "Type of THEN - ELSE not equal");
-          {exp=(), ty=(#ty (trexp then'))})
+        let val thenTy = #ty (trexp then')
+            val elseTy = #ty (trexp else')
+        in
+            checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+            assertTypeEq(thenTy, elseTy, err pos, "IfExp THEN-ELSE type mismatch");
+            {exp=(), ty=thenTy}
+        end
       )
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
@@ -452,7 +451,7 @@ struct
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
                           if resultTy <> Ty.NIL then
-                              assertTypeMatch(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
+                              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
                           else
                               ()
                         ;
