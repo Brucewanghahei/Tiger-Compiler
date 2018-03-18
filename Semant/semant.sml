@@ -477,7 +477,7 @@ struct
                   val venv' = trFunDecHeader(venv, fundecs)
 
                   (* second pass to translate body*)
-                  fun trFunDec (venv:venv, {name, params, result, body, pos}::tl: A.fundec list) =
+                  fun trFunDec (venv:venv, {name, params, result, body, pos}: A.fundec) =
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
@@ -490,13 +490,11 @@ struct
                               assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
                           else
                               ()
-                        ;
-                          venv
                       end
-                    | trFunDec (venv, nil) = venv
               in
+                  map (fn dec => trFunDec(venv', dec)) fundecs;
                   {
-                    venv = trFunDec(venv', fundecs),
+                    venv = venv',
                     tenv = tenv
                   }
               end
