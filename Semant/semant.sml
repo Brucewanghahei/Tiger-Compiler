@@ -73,7 +73,7 @@ struct
         (
         case S.look(venv, symbol) of 
           SOME(E.VarEntry {ty=_, assignable=assignable}) => 
-            assertEq(assignable, true, op =, err pos, "Variable not assignable")
+            assertEq(assignable, true, op =, err pos, "variable not assignable: " ^ S.name symbol)
         | _ => ()
         )
     | _ => ()
@@ -371,7 +371,8 @@ struct
               in
                   assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
                   {
-                    venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable = false}),
+                    venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable =
+                    true}),
                     tenv = tenv
                   }
               end
@@ -383,7 +384,7 @@ struct
                   assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name ^ " - type mismatch");
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy, assignable
-                    = false}),
+                    = true}),
                     tenv = tenv
                   }
               end
