@@ -395,6 +395,7 @@ struct
             | trdec (A.TypeDec(tydecs)) =
               let
                   val msgTmpl = "TypeDec: "
+                                    
                   (* first pass to scan headers*)
                   fun trTyDecHeader (tenv:tenv, tydecs) =
                       foldl (fn ({name, ty, pos}, acc) => S.enter(acc, name, Types.NAME(name, ref NONE))) tenv tydecs
@@ -414,9 +415,39 @@ struct
                         venv = venv,
                         tenv = tenv
                       }
+
+                  (* check alias cycle: ignore array/record *)
+                  fun checkTyDecCycle (tenv, tydecs) =
+                      let
+                          val nodes = map (fn {name, ty, pos} => name) tydecs
+                          fun dfs (node, parent, start) =
+                              if node = parent orelse node = start then
+                                  true
+                              else
+                                  dfsHelper(node, start)
+                          and dfsHelper (node, start) =
+                              case lookType(tenv, node, 0) of
+                                  Ty.NAME(snode, tyref) =>
+                                  (
+                                    case !tyref of
+                                        SOME ty =>
+                                        (
+                                          case ty of Ty.NAME(snext, _) =>
+                                                     dfs(snext, snode, start)
+                                                  | _ => false
+                                        )
+                                      | _ => false
+                                  )
+                                | _ => false
+                      in
+                          List.exists (fn node => dfsHelper(node, node)) nodes
+                      end
+
                   val tenv' = trTyDecHeader(tenv, tydecs)
+                  val res = trTyDecBody(tenv', tydecs)
               in
-                  trTyDecBody(tenv', tydecs)
+                  assertEq(checkTyDecCycle(tenv', tydecs), false, op =, err 0, msgTmpl ^ " cycle(no record/array) detected in mutual recursion");
+                  res
               end
             | trdec (A.FunctionDec fundecs) =
               let
