@@ -190,7 +190,7 @@ struct
         let 
           val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
         in
-          case lvalue_ty of
+          case actual_ty lvalue_ty of
             Ty.ARRAY (ty, uni) =>
               (
               checkInt(transExp(venv, tenv, exp), pos, "");
@@ -409,6 +409,7 @@ struct
             | trdec (A.TypeDec(tydecs)) =
               let
                   val msgTmpl = "TypeDec: "
+                                    
                   (* first pass to scan headers*)
                   fun trTyDecHeaders (tenv:tenv, tydecs) =
                   let
@@ -488,28 +489,15 @@ struct
                         | t => t
 
                   fun trFunDecHeaders (venv:venv, decs) =
-                      let
-                          val (venv', _) =
-                              foldl
-                                  (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
-                                      let
-                                          val resultTy = trResult result
-                                          val paramNameTys = trParams params
-                                      in
-                                          (
-                                            S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy}),
-                                            case S.look(accTemp, name) of
-                                                SOME _ => (err ~1 
-                                                               "same mutually recursive function declaration"; 
-                                                           accTemp)
-                                              | NONE => S.enter(accTemp, name, E.FunEntry{formals = paramNameTys, result = resultTy})
-                                          )
-                                      end)
-                                    (venv, S.empty)
-                                    decs
-                      in
-                          venv'
-                      end
+                      foldl (fn ({name, params, result, body, pos}, acc) =>
+                                let
+                                    val resultTy = trResult result
+                                    val paramNameTys = trParams params
+                                in
+                                    S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy})
+                                end)
+                            venv
+                            decs
 
                   val venv' = trFunDecHeaders(venv, fundecs)
 
