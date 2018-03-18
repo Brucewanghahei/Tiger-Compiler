@@ -418,7 +418,7 @@ struct
                       S.enter(acc, name,
                       Types.NAME(name, ref NONE)), 
                       (case S.look(acc_temp, name) of
-                           SOME ty =>  (err ~1 
+                           SOME ty =>  (err pos 
                             "same mutually recursive type name"; 
                             acc_temp)
                          | NONE => S.enter(acc_temp, name, Ty.UNIT))
