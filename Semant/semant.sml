@@ -134,7 +134,7 @@ struct
       ) of
       (id, SOME(field_ty)) => actual_ty(field_ty)
     | (id, NONE) => (
-        err pos ("Field" ^ (S.name id) ^ " not found");
+        err pos ("Field " ^ (S.name id) ^ " not found");
         Ty.UNIT
         )
       
@@ -153,14 +153,15 @@ struct
          SOME fun_entry => fun_entry
        | NONE => (err pos ("Function " ^ (S.name func) ^ " not found"); E.FunEntry {formals = [], result = Ty.UNIT})
 
-  fun checkFuncParams (func_name:string, formals: Ty.ty list, args: Ty.ty list, pos) = 
+  fun checkFuncParams (func_name:string, formals: (S.symbol*Ty.ty) list, args: Ty.ty list, pos) = 
   let
-    fun f (lhs_head::lhs_tail, rhs_head::rhs_tail) =
+    fun f ( (param_name, param_ty)::param_tail, input_ty::input_tail) =
         (
-        assertTypeEq(lhs_head, rhs_head, err pos,
-        "Parameter Mismatch:\n" ^ "function parameter: " ^ (Ty.name lhs_head) ^
-        " input parameter: " ^ (Ty.name rhs_head));
-        f (lhs_tail, rhs_tail)
+        assertTypeEq(param_ty, input_ty, err pos,
+        "Parameter Mismatch:\n" ^ "function parameter: " ^ 
+        (S.name param_name) ^ " : " ^(Ty.name param_ty)
+        ^ "\ninput tpye: " ^ (Ty.name input_ty));
+        f (param_tail, input_tail)
         )
       | f ([], []) = () 
       | f (_, _) = err pos ("Parameter size mismatch: function " ^ func_name) 
@@ -287,7 +288,10 @@ struct
         checkInt(trexp size, pos, "Array size must be INT");
 	    (case (lookActualType(tenv, typ, pos)) of
 	      Ty.ARRAY(actTy, unique) =>
-	      (assertTypeEq(actual_ty(actTy), actual_ty(initTy), err pos, "Type mismatch between initial type and array type");
+	      (assertTypeEq(actTy, initTy, err pos,
+          "Type mismatch between initial type and array type.\n"
+          ^ "Array type: " ^ (Ty.name (lookType(tenv, typ, pos)))
+          ^ "\nInit type: " ^ (Ty.name initTy) );
 		  {exp=(), ty=lookType(tenv, typ, pos)})
 	    | _ => (err pos ("Invalid ARRAY type");
 	        {exp=(), ty=Ty.UNIT})
@@ -391,9 +395,11 @@ struct
             | trdec (A.VarDec{name, typ = SOME(s, _), init, pos, ...}) = 
               let val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
-                  val decTy = lookActualType(tenv, s, pos)
+                  val decTy = lookType(tenv, s, pos)
               in
-                  assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name ^ " - type mismatch");
+                  assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
+                  ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
+                  ^ "\nInit type: " ^ (Ty.name ty));
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy, assignable
                     = true}),
@@ -457,8 +463,8 @@ struct
               let
                   val msgTmpl = "FunDec: "
                   fun trParams params = map (fn {name, typ, pos, escape} =>
-                                                               {name = name, ty = lookActualType(tenv, typ, pos)})
-                                                           params
+                                        (name, lookType(tenv,typ, pos)))
+                                        params
                   (* first pass to scan headers*)
 
                   fun trResult NONE = Ty.UNIT
@@ -473,7 +479,7 @@ struct
                                     val resultTy = trResult result
                                     val paramNameTys = trParams params
                                 in
-                                    S.enter(acc, name, E.FunEntry{formals = map #ty paramNameTys, result = resultTy})
+                                    S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy})
                                 end)
                             venv
                             decs
@@ -485,7 +491,7 @@ struct
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
-                          fun enterParam ({name, ty}, venv:venv) =
+                          fun enterParam ((name, ty), venv:venv) =
                               S.enter(venv, name, E.VarEntry{ty = ty, assignable = false})
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))

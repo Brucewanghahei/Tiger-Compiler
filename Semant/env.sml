@@ -19,7 +19,7 @@ struct
   type access = unit (* todo: unknown *)
   type ty = Types.ty
   datatype enventry = VarEntry of {ty: ty, assignable: bool}
-                    | FunEntry of {formals: ty list, result: ty}
+                    | FunEntry of {formals: (Symbol.symbol * ty) list, result: ty}
 
   type tenv = ty Symbol.table       (* predefined types *)
   type venv = enventry Symbol.table (* predefined functions *)

@@ -37,7 +37,7 @@ struct
   | name (NAME (sym, ty_opt_ref)) =
       (
       case ty_opt_ref of 
-        ref(SOME(ty)) => (Symbol.name sym) ^ "(" ^ (name ty) ^ ")"
+        ref(SOME(ty)) => (Symbol.name sym) ^ " (" ^ (name ty) ^ ")"
       | ref(NONE) => (Symbol.name sym)
       )
   | name UNIT = "Unit"
