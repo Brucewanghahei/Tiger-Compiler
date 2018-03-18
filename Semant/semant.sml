@@ -72,6 +72,17 @@ struct
       else
           ()
 
+  fun assertAssignable(venv, var: A.var, pos) = 
+    case var of
+      A.SimpleVar(symbol, _) => 
+        (
+        case S.look(venv, symbol) of 
+          SOME(E.VarEntry {ty=_, assignable=assignable}) => 
+            assertEq(assignable, true, op =, err pos, "Variable not assignable")
+        | NONE => ()
+        )
+    | _ => ()
+
   fun isValidRecord (Ty.RECORD(symTys, _)) =
       let 
           fun f (hd::tl) =
@@ -108,7 +119,7 @@ struct
   (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
-         SOME(E.VarEntry{ty}) => {exp=(), ty=actual_ty(ty)}
+         SOME(E.VarEntry{ty=ty, assignable= _}) => {exp=(), ty=actual_ty(ty)}
        | _ => (err pos ("Undefined variable " ^ (S.name symbol)); {exp=(), ty=Ty.INT}) 
 
   (* use Ty.UNIT as dummy return value *)
@@ -135,10 +146,10 @@ struct
 
 
   fun checkInt ({exp, ty}, pos, extra_info) = 
-    assertEq (ty, Ty.INT, op =, err pos, "integer required" ^ extra_info)
+    assertEq (ty, Ty.INT, op =, err pos, "integer required " ^ extra_info)
   
   fun checkNoValue ({exp, ty}, pos, extra_info) =
-    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required" ^ extra_info)
+    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required " ^ extra_info)
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
@@ -234,16 +245,16 @@ struct
       end
     | trexp (A.ForExp {var=id, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
       (
-      checkInt(trexp lo, pos, "");
-      checkInt(trexp hi, pos, "");
+      checkInt(trexp lo, pos, "ForExp lo");
+      checkInt(trexp hi, pos, "ForExp hi");
       let
         val _ = loopLevel := (!loopLevel) + 1
-        val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.UNIT}))
+        val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.INT, assignable = false}))
         (*body check required*)
         val _ = loopLevel := (!loopLevel) - 1
         val _ = breakNum := 0
       in
-        checkNoValue(transExp(venv', tenv, body), pos, "") (* ensure id not re-assigned in the body scope *)
+        checkNoValue(transExp(venv', tenv, body), pos, " ForExp body should be UNIT") (* ensure id not re-assigned in the body scope *)
       end;
       {exp = (), ty=Ty.UNIT}
       )
@@ -282,6 +293,7 @@ struct
         val {exp=eExp, ty=expTy} = trexp exp
       in
         (
+        assertAssignable(venv, var, pos); 
         assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
         {exp=(), ty=Ty.UNIT}
         )
@@ -316,7 +328,7 @@ struct
           {exp=(), ty=Ty.UNIT})
       | SOME(else') =>
               (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-	  assertEq(#ty (trexp then'), #ty (trexp else'), op =, err pos, "Invalid THEN expression type, UNIT expected");
+	  assertEq(#ty (trexp then'), #ty (trexp else'), op =, err pos, "Type of THEN - ELSE not equal");
           {exp=(), ty=(#ty (trexp then'))})
       )
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
@@ -360,7 +372,7 @@ struct
               in
                   assertEq(ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
                   {
-                    venv = S.enter(venv, name, E.VarEntry{ty = ty}),
+                    venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable = false}),
                     tenv = tenv
                   }
               end
@@ -371,7 +383,8 @@ struct
               in
                   assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name ^ " - type mismatch");
                   {
-                    venv = S.enter(venv, name, E.VarEntry{ty = decTy}),
+                    venv = S.enter(venv, name, E.VarEntry{ty = decTy, assignable
+                    = false}),
                     tenv = tenv
                   }
               end
@@ -434,7 +447,7 @@ struct
                           val resultTy = trResult result
                           val paramNameTys = trParams params
                           fun enterParam ({name, ty}, venv:venv) =
-                              S.enter(venv, name, E.VarEntry{ty = ty})
+                              S.enter(venv, name, E.VarEntry{ty = ty, assignable = false})
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
