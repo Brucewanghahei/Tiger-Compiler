@@ -405,24 +405,17 @@ struct
                   val msgTmpl = "TypeDec: "
                                     
                   (* first pass to scan headers*)
-                  fun trTyDecHeader (tenv:tenv, tydecs) =
+                  fun trTyDecHeaders (tenv:tenv, tydecs) =
                       foldl (fn ({name, ty, pos}, acc) => S.enter(acc, name, Types.NAME(name, ref NONE))) tenv tydecs
                   (* second pass to fill ref *)
 
-                  fun trTyDecBody (tenv, {name, ty, pos}::tl) =
+                  fun trTyDecBody (tenv, {name, ty, pos}) =
                       let val tyHeader = transTy(tenv, ty)
                       in
                         case lookType(tenv, name, pos) of
                             (Ty.NAME (_, tyref)) => tyref := SOME tyHeader
                             | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header")
-                        ;
-                          trTyDecBody(tenv, tl)
                       end
-                    | trTyDecBody (tenv:tenv, nil) =
-                      {
-                        venv = venv,
-                        tenv = tenv
-                      }
 
                   (* check alias cycle: ignore array/record *)
                   fun checkTyDecCycle (tenv, tydecs) =
@@ -451,11 +444,14 @@ struct
                           List.exists (fn node => dfsHelper(node, node)) nodes
                       end
 
-                  val tenv' = trTyDecHeader(tenv, tydecs)
-                  val res = trTyDecBody(tenv', tydecs)
+                  val tenv' = trTyDecHeaders(tenv, tydecs)
               in
+                  map (fn dec => trTyDecBody(tenv', dec)) tydecs;
                   assertEq(checkTyDecCycle(tenv', tydecs), false, op =, err 0, msgTmpl ^ " cycle(no record/array) detected in mutual recursion");
-                  res
+                  {
+                    venv = venv,
+                    tenv = tenv'
+                  }
               end
             | trdec (A.FunctionDec fundecs) =
               let
@@ -471,7 +467,7 @@ struct
                           Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
                         | t => t
 
-                  fun trFunDecHeader (venv:venv, decs) =
+                  fun trFunDecHeaders (venv:venv, decs) =
                       foldl (fn ({name, params, result, body, pos}, acc) =>
                                 let
                                     val resultTy = trResult result
@@ -482,10 +478,10 @@ struct
                             venv
                             decs
 
-                  val venv' = trFunDecHeader(venv, fundecs)
+                  val venv' = trFunDecHeaders(venv, fundecs)
 
                   (* second pass to translate body*)
-                  fun trFunDec (venv:venv, {name, params, result, body, pos}: A.fundec) =
+                  fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
                       let
                           val resultTy = trResult result
                           val paramNameTys = trParams params
@@ -500,7 +496,7 @@ struct
                               ()
                       end
               in
-                  map (fn dec => trFunDec(venv', dec)) fundecs;
+                  map (fn dec => trFunDecBody(venv', dec)) fundecs;
                   {
                     venv = venv',
                     tenv = tenv
