@@ -61,11 +61,6 @@ struct
     else
       ()
 
-  fun assertTypeMatch (ty, decTy, errCurry, msg) =
-      case (ty, decTy) of
-          (Ty.NIL, Ty.RECORD(_, _)) => ()
-        | _ => assertTypeEq(ty, decTy, errCurry, msg)
-
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
       if not (eqFun(lhs, rhs)) then
           errCurry msg
@@ -153,7 +148,7 @@ struct
         (
         assertTypeEq(lhs_head, rhs_head, err pos,
         "Parameter Mismatch:\n" ^ "function parameter: " ^ (Ty.name lhs_head) ^
-        "input parameter: " ^ (Ty.name rhs_head));
+        " input parameter: " ^ (Ty.name rhs_head));
         f (lhs_tail, rhs_tail)
         )
       | f ([], []) = () 
@@ -439,7 +434,7 @@ struct
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
                           if resultTy <> Ty.NIL then
-                              assertTypeMatch(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
+                              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
                           else
                               ()
                         ;
