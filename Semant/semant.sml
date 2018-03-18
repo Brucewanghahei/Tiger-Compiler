@@ -409,7 +409,6 @@ struct
             | trdec (A.TypeDec(tydecs)) =
               let
                   val msgTmpl = "TypeDec: "
-                                    
                   (* first pass to scan headers*)
                   fun trTyDecHeaders (tenv:tenv, tydecs) =
                   let
@@ -489,15 +488,28 @@ struct
                         | t => t
 
                   fun trFunDecHeaders (venv:venv, decs) =
-                      foldl (fn ({name, params, result, body, pos}, acc) =>
-                                let
-                                    val resultTy = trResult result
-                                    val paramNameTys = trParams params
-                                in
-                                    S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy})
-                                end)
-                            venv
-                            decs
+                      let
+                          val (venv', _) =
+                              foldl
+                                  (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
+                                      let
+                                          val resultTy = trResult result
+                                          val paramNameTys = trParams params
+                                      in
+                                          (
+                                            S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy}),
+                                            case S.look(accTemp, name) of
+                                                SOME _ => (err ~1 
+                                                               "same mutually recursive function declaration"; 
+                                                           accTemp)
+                                              | NONE => S.enter(accTemp, name, E.FunEntry{formals = paramNameTys, result = resultTy})
+                                          )
+                                      end)
+                                    (venv, S.empty)
+                                    decs
+                      in
+                          venv'
+                      end
 
                   val venv' = trFunDecHeaders(venv, fundecs)
 
