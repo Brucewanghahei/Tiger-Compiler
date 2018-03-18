@@ -240,8 +240,8 @@ struct
       end
     | trexp (A.ForExp {var=id, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
       (
-      checkInt(trexp lo, pos, "ForExp lo");
-      checkInt(trexp hi, pos, "ForExp hi");
+      checkInt(trexp lo, pos, S.name id);
+      checkInt(trexp hi, pos, S.name id);
       let
         val _ = loopLevel := (!loopLevel) + 1
         val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.INT, assignable = false}))
