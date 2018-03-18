@@ -490,10 +490,10 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
-                          if resultTy <> Ty.UNIT then
-                              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ " type mismatch")
-                          else
-                              ()
+                          assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
+                          (S.name name) ^ " type mismatch.\nReturn type: " ^
+                          (Ty.name resultTy) ^ "\nBody type: " ^ (Ty.name
+                          bodyTy))
                       end
               in
                   map (fn dec => trFunDecBody(venv', dec)) fundecs;
