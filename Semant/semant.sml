@@ -153,7 +153,7 @@ struct
          SOME fun_entry => fun_entry
        | NONE => (err pos ("Function " ^ (S.name func) ^ " not found"); E.FunEntry {formals = [], result = Ty.UNIT})
 
-  fun checkFuncParams (formals: Ty.ty list, args: Ty.ty list, pos) = 
+  fun checkFuncParams (func_name:string, formals: Ty.ty list, args: Ty.ty list, pos) = 
   let
     fun f (lhs_head::lhs_tail, rhs_head::rhs_tail) =
         (
@@ -163,7 +163,7 @@ struct
         f (lhs_tail, rhs_tail)
         )
       | f ([], []) = () 
-      | f (_, _) = err pos "Parameter size mismatch"
+      | f (_, _) = err pos ("Parameter size mismatch: function " ^ func_name) 
   in
     f(formals, args)
   end
@@ -212,10 +212,18 @@ struct
         val {exp=_, ty=rty} = trexp right;
       in
       (
-        assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type"^
-        "mismatch\n" ^ "left operand: " ^ (Ty.name lty) ^"\nright operand: " ^
-        (Ty.name rty));
-        {exp=(), ty=Ty.INT}
+        case oper of
+          (A.EqOp | A.NeqOp | A.LtOp | A.LeOp | A.GtOp | A.GeOp) => ( 
+            assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type"^
+            "mismatch\n" ^ "left operand: " ^ (Ty.name lty) ^"\nright operand: " ^
+            (Ty.name rty));
+            {exp=(), ty=Ty.INT}
+          )
+           | (A.PlusOp | A.MinusOp | A.TimesOp | A.DivideOp) => (
+            assertTypeEq(Ty.INT, lty, err pos, "left operand integer required");
+            assertTypeEq(Ty.INT, rty, err pos, "right operand integer required");
+            {exp=(), ty=Ty.INT}
+          )
       )
       end
     | trexp (A.IntExp int) =
@@ -266,7 +274,7 @@ struct
       (
       let
         val E.FunEntry{formals=formals, result=result} = lookupFunEntry(venv, func, pos)
-        val () = checkFuncParams(formals, map #ty (map trexp args), pos)
+        val () = checkFuncParams(S.name func, formals, map #ty (map trexp args), pos)
       in
         {exp=(), ty=result}
       end
@@ -457,7 +465,7 @@ struct
                                                            params
                   (* first pass to scan headers*)
 
-                  fun trResult NONE = Ty.NIL
+                  fun trResult NONE = Ty.UNIT
                     | trResult (SOME(s, pos)) = 
                       case lookActualType(tenv, s, pos) of
                           Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
@@ -486,8 +494,8 @@ struct
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
-                          if resultTy <> Ty.NIL then
-                              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ "type mismatch")
+                          if resultTy <> Ty.UNIT then
+                              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^ S.name name ^ " type mismatch")
                           else
                               ()
                       end
