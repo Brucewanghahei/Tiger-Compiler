@@ -208,8 +208,8 @@ struct
   and transExp(venv:venv, tenv:tenv, exp:A.exp) =
   let fun trexp (A.OpExp{left, oper, right, pos}) =
       (
-      checkInt(trexp left, pos, "");
-      checkInt(trexp right, pos, "");
+      checkInt(trexp left, pos, "left exp of the operand");
+      checkInt(trexp right, pos, "right exp of the operand");
       {exp=(), ty=Ty.INT}
       )
     | trexp (A.IntExp int) =
@@ -225,10 +225,7 @@ struct
       let
           fun f seq =
           case seq of
-               [] => (
-                 err ~1 "two or more expression in seq requried";
-                 {exp=(), ty=Ty.UNIT}
-                 )
+               [] => {exp=(), ty=Ty.UNIT}
              | [(exp, pos)] => trexp(exp)
              | (exp, pos)::tail =>
                  (
