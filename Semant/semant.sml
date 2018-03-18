@@ -130,10 +130,10 @@ struct
 
 
   fun checkInt ({exp, ty}, pos, extra_info) = 
-    assertEq (ty, Ty.INT, op =, err pos, "integer required" ^ extra_info)
+    assertEq (ty, Ty.INT, op =, err pos, "integer required: " ^ extra_info)
   
   fun checkNoValue ({exp, ty}, pos, extra_info) =
-    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required" ^ extra_info)
+    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required: " ^ extra_info)
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
@@ -212,7 +212,7 @@ struct
       end
     | trexp (A.SeqExp seq) =
       let
-        fun f seq =
+          fun f seq =
           case seq of
                [] => (
                  err ~1 "two or more expression in seq requried";
@@ -305,14 +305,18 @@ struct
       end
     | trexp (A.IfExp {test=test, then'=then', else'=else_opt, pos=pos}) =
       (case else_opt of
-          NONE =>
-              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-          checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-          {exp=(), ty=Ty.UNIT})
+           NONE =>
+           (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+            checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
+            {exp=(), ty=Ty.UNIT})
       | SOME(else') =>
-              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-	  assertEq(#ty (trexp then'), #ty (trexp else'), op =, err pos, "Invalid THEN expression type, UNIT expected");
-          {exp=(), ty=(#ty (trexp then'))})
+        let val thenTy = #ty (trexp then')
+            val elseTy = #ty (trexp else')
+        in
+            checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+	        assertTypeEq(thenTy, elseTy, err pos, "IfExp type mismatch");
+            {exp=(), ty=thenTy}
+        end
       )
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
