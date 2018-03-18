@@ -67,10 +67,12 @@ struct
        | (_, _) => false 
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
+    (err ~1 "asserting";
     if not (compareAnyType(actual_ty(lhs), actual_ty(rhs))) then
       errCurry msg
     else
       ()
+    )
 
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
       if not (eqFun(lhs, rhs)) then
@@ -141,10 +143,10 @@ struct
 
 
   fun checkInt ({exp, ty}, pos, extra_info) = 
-    assertEq (ty, Ty.INT, op =, err pos, "integer required: " ^ extra_info)
+    assertTypeEq (ty, Ty.INT, err pos, "integer required: " ^ extra_info)
   
   fun checkNoValue ({exp, ty}, pos, extra_info) =
-    assertEq (ty, Ty.UNIT, op =, err pos, "no-value required: " ^ extra_info)
+    assertTypeEq (ty, Ty.UNIT, err pos, "no-value(UNIT) required: " ^ extra_info)
     
   (* use E.FunEntry {...} as dummy return value *)
   (* If error, exit ? or return dummy entry ? *)
@@ -233,6 +235,7 @@ struct
       let
         val {venv=venv', tenv=tenv'} =
         foldl (fn (a,b) => transDec(#venv b, #tenv b, a)) {venv=venv, tenv=tenv} decs
+        val _ = err ~1 "transdec finish"
       in
         transExp(venv', tenv', body)
       end
@@ -251,20 +254,19 @@ struct
         f seq
       end
     | trexp (A.ForExp {var=id, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
-      (
-      checkInt(trexp lo, pos, S.name id);
-      checkInt(trexp hi, pos, S.name id);
-      let
+      let 
+        val _ = checkInt(trexp lo, pos, S.name id);
+        val _ = checkInt(trexp hi, pos, S.name id);
         val _ = loopLevel := (!loopLevel) + 1
         val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.INT, assignable = false}))
         (*body check required*)
         val _ = loopLevel := (!loopLevel) - 1
         val _ = breakNum := 0
+        val body_exp = transExp(venv', tenv, body)
+        val _ = checkNoValue(body_exp, pos, " ForExp body should be UNIT") (* ensure id not re-assigned in the body scope *)
       in
-        checkNoValue(transExp(venv', tenv, body), pos, " ForExp body should be UNIT") (* ensure id not re-assigned in the body scope *)
-      end;
-      {exp = (), ty=Ty.UNIT}
-      )
+        body_exp
+      end
     | trexp (A.VarExp var) =
       transVar(venv, tenv, var)
     | trexp (A.NilExp) =
@@ -393,13 +395,16 @@ struct
                   }
               end
             | trdec (A.VarDec{name, typ = SOME(s, _), init, pos, ...}) = 
-              let val {exp, ty} = transExp(venv, tenv, init)
+              let 
+                  val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
                   val decTy = lookType(tenv, s, pos)
+                  val _ = err ~1 "vardec"
               in
                   assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
                   ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
                   ^ "\nInit type: " ^ (Ty.name ty));
+                  err ~1 "assert finish";
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy, assignable
                     = true}),

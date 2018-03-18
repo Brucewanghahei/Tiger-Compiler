@@ -1,5 +1,3 @@
-use "table.sig";
-
 functor IntMapTable (type key
 		     val getInt: key -> int) : TABLE =
 struct

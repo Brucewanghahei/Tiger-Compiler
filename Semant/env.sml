@@ -1,4 +1,3 @@
-use "symbol.sml";
 (*
 signature ENV =
 sig

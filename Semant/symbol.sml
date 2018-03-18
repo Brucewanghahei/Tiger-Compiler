@@ -1,4 +1,3 @@
-use "table.sml";
 signature SYMBOL =
 sig
   eqtype symbol
