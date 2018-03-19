@@ -505,7 +505,7 @@ struct
                           val resultTy = trResult result
                           val paramNameTys = trParams params
                           fun enterParam ((name, ty), venv:venv) =
-                              S.enter(venv, name, E.VarEntry{ty = ty, assignable = false})
+                              S.enter(venv, name, E.VarEntry{ty = ty, assignable = true})
                           val venv' = foldl enterParam venv paramNameTys
                           val bodyTy = #ty (transExp(venv', tenv, body))
                       in
