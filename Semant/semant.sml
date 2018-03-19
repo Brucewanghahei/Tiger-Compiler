@@ -384,7 +384,7 @@ struct
               let val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
               in
-                  assertEq(lookActualType(tenv, ty, pos), Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
+                  assertEq(actual_ty ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable = true}),
                     tenv = tenv
