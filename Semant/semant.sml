@@ -67,12 +67,10 @@ struct
        | (_, _) => false 
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
-    (err ~1 "asserting";
     if not (compareAnyType(actual_ty(lhs), actual_ty(rhs))) then
       errCurry msg
     else
       ()
-    )
 
   fun assertEq (lhs: 'a, rhs: 'a, eqFun, errCurry, msg) =
       if not (eqFun(lhs, rhs)) then
@@ -235,7 +233,6 @@ struct
       let
         val {venv=venv', tenv=tenv'} =
         foldl (fn (a,b) => transDec(#venv b, #tenv b, a)) {venv=venv, tenv=tenv} decs
-        val _ = err ~1 "transdec finish"
       in
         transExp(venv', tenv', body)
       end
@@ -399,12 +396,10 @@ struct
                   val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
                   val decTy = lookType(tenv, s, pos)
-                  val _ = err ~1 "vardec"
               in
                   assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
                   ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
                   ^ "\nInit type: " ^ (Ty.name ty));
-                  err ~1 "assert finish";
                   {
                     venv = S.enter(venv, name, E.VarEntry{ty = decTy, assignable
                     = true}),
