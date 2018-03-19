@@ -1,0 +1,255 @@
+CM.make "sources.cm"; Main.compile "../testcases/test1.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test2.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test3.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test4.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test5.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test6.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test7.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test8.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test9.tig";
+:1.44:IfExp THEN-ELSE type mismatch
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test10.tig";
+:1.38:no-value(UNIT) required: Invalid WHILE loop body type, UNIT expected
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test11.tig";
+:1.78:integer required: i
+:1.100:variable not assignable: i
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test12.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test13.tig";
+:1.48:left/right operand of OpExp typemismatch
+left operand: Integer
+right operand: String
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test14.tig";
+:1.191:left/right operand of OpExp typemismatch
+left operand: rectype (Record: {name:String, id:Integer})
+right operand: arrtype (Array of Integer)
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test15.tig";
+:1.41:no-value(UNIT) required: Invalid THEN expression type, UNIT expected
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test16.tig";
+0.0:TypeDec:  cycle(no record/array) detected in mutual recursion
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test17.tig";
+:1.105:Type treelist not found
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test18.tig";
+:1.117:Function do_nothing2 not found
+:1.117:Parameter size mismatch: function do_nothing2
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test19.tig";
+:1.217:Undefined variable a
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test20.tig";
+:1.54:Undefined variable i
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test21.tig";
+:1.154:right operand integer required
+:1.96:FunDec: nfactor type mismatch.
+Return type: Unit
+Body type: Integer
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test22.tig";
+:1.130:Field nam not found
+:1.130:Assignment type mismatch
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test23.tig";
+:1.120:Assignment type mismatch
+:1.137:Assignment type mismatch
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test24.tig";
+:1.53:Array required
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test25.tig";
+:1.54:Record requried
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test26.tig";
+:1.33:right operand integer required
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test27.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test28.tig";
+:1.125:VarDec: rec1 - type mismatch
+Variable type: rectype1 (Record: {name:String, id:Integer})
+Init type: rectype2 (Record: {name:String, id:Integer})
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test29.tig";
+:1.104:VarDec: arr1 - type mismatch
+Variable type: arrtype1 (Array of Integer)
+Init type: arrtype2 (Array of Integer)
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test30.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test31.tig";
+:1.59:VarDec: a - type mismatch
+Variable type: Integer
+Init type: String
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test32.tig";
+:1.99:Type mismatch between initial type and array type.
+Array type: arrayty (Array of Integer)
+Init type: String
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test33.tig";
+:1.41:Type rectype not found
+:1.41:Invalid RECORD type: rectype
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test34.tig";
+:1.103:Parameter Mismatch:
+function parameter: a : Integer
+input tpye: String
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test35.tig";
+:1.92:Parameter Mismatch:
+function parameter: a : Integer
+input tpye: String
+:1.92:Parameter size mismatch: function g
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test36.tig";
+:1.93:Parameter size mismatch: function g
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test37.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test38.tig";
+:1.175:same mutually recursive type name
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test39.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test40.tig";
+:1.44:FunDec: g type mismatch.
+Return type: Unit
+Body type: Integer
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test41.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test42.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test43.tig";
+:1.89:left operand integer required
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test44.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test45.tig";
+:1.119:VarDec: a cannot be assigned to nil implicitly
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test46.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test47.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test48.tig";
+val it = () : unit
+- 
+
+CM.make "sources.cm"; Main.compile "../testcases/test49.tig";
+:1.129:syntax error: inserting  PLUS
+:1.121:Undefined variable rectype
+:1.121:right operand integer required
+val it = () : unit
+- 
+
