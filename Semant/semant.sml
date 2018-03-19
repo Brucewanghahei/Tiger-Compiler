@@ -252,8 +252,8 @@ struct
       end
     | trexp (A.ForExp {var=id, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
       let 
-        val _ = checkInt(trexp lo, pos, S.name id);
-        val _ = checkInt(trexp hi, pos, S.name id);
+        val _ = checkInt(trexp lo, pos, "Low side of the ForExp with variable: " ^ S.name id );
+        val _ = checkInt(trexp hi, pos, "High side of the ForExp with variable: " ^ S.name id);
         val _ = loopLevel := (!loopLevel) + 1
         val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.INT, assignable = false}))
         (*body check required*)
