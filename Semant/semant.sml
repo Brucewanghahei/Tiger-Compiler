@@ -215,8 +215,8 @@ struct
       (
         case oper of
           (A.EqOp | A.NeqOp | A.LtOp | A.LeOp | A.GtOp | A.GeOp) => ( 
-            assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type"^
-            "mismatch\n" ^ "left operand: " ^ (Ty.name lty) ^"\nright operand: " ^
+            assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type" ^
+            " mismatch\n" ^ "left operand: " ^ (Ty.name lty) ^"\nright operand: " ^
             (Ty.name rty));
             {exp=(), ty=Ty.INT}
           )
@@ -417,9 +417,7 @@ struct
                       S.enter(acc, name,
                       Types.NAME(name, ref NONE)), 
                       (case S.look(acc_temp, name) of
-                           SOME ty =>  (err pos 
-                            "same mutually recursive type name"; 
-                            acc_temp)
+                           SOME ty =>  (err pos (msgTmpl ^ "same mutually recursive type name"); acc_temp)
                          | NONE => S.enter(acc_temp, name, Ty.UNIT))
                       )
                       ) (tenv, temp_tenv) tydecs
@@ -487,15 +485,28 @@ struct
                         | t => t
 
                   fun trFunDecHeaders (venv:venv, decs) =
-                      foldl (fn ({name, params, result, body, pos}, acc) =>
-                                let
-                                    val resultTy = trResult result
-                                    val paramNameTys = trParams params
-                                in
-                                    S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy})
-                                end)
-                            venv
-                            decs
+                      let
+                          val (venv', _) =
+                              foldl
+                                  (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
+                                      let
+                                          val resultTy = trResult result
+                                          val paramNameTys = trParams params
+                                      in
+                                          (
+                                            S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy}),
+                                            case S.look(accTemp, name) of
+                                                SOME _ => (err ~1
+                                                               (msgTmpl ^ "same mutually recursive function declaration");
+                                                           accTemp)
+                                              | NONE => S.enter(accTemp, name, E.FunEntry{formals = paramNameTys, result = resultTy})
+                                          )
+                                      end)
+                                  (venv, S.empty)
+                                  decs
+                      in
+                          venv'
+                      end
 
                   val venv' = trFunDecHeaders(venv, fundecs)
 
