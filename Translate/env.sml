@@ -20,8 +20,10 @@ struct
 
   type access = unit (* todo: unknown *)
   type ty = T.ty
-  datatype enventry = VarEntry of {ty: ty, assignable: bool}
-                    | FunEntry of {formals: (S.symbol * ty) list, result: ty}
+  datatype enventry = VarEntry of {access:Translate.access, ty: ty, assignable: bool}
+                    | FunEntry of {level: Translate.access,
+                                   label: Temp.label,
+                                   formals: (S.symbol * ty) list, result: ty}
 
   type tenv = ty S.table       (* predefined types *)
   type venv = enventry S.table (* predefined functions *)
