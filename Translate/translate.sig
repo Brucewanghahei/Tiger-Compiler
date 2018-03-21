@@ -4,6 +4,10 @@ sig
     type level
     type access (* not the same as Frame.access *)
 
+    val unEx : exp -> Tree.exp
+    val unNx : exp -> Tree.stm
+    val unCx : exp -> (Temp.label * Temp.label -> Tree.stm)
+
     val outermost : level
     val newLevel : {parent: level, name: Temp.label,
                     escapes: bool list} -> level
