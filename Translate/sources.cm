@@ -16,6 +16,7 @@ temp.sml
 frame.sig
 mipsframe.sml
 tree.sml
+translate.sig
 translate.sml
 semant.sml
 $/smlnj-lib.cm
