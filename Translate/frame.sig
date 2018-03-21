@@ -12,5 +12,8 @@ sig
   val wordSize: int
   val exp : access -> Tree.exp -> Tree.exp
   
+  datatype frag = PROC of {body: Tree.stm, frame: frame}
+                | STRING of Temp.label * string
+  
   val procEntryExit1 : frame * Tree.stm -> Tree.stm 
 end

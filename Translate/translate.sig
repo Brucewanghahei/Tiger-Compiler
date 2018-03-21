@@ -4,6 +4,9 @@ sig
     type level
     type access (* not the same as Frame.access *)
 
+    structure Frame : FRAME
+    val getResult : unit -> Frame.frag list
+
     val unEx : exp -> Tree.exp
     val unNx : exp -> Tree.stm
     val unCx : exp -> (Temp.label * Temp.label -> Tree.stm)

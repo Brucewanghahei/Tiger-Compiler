@@ -1,6 +1,6 @@
 structure Translate : TRANSLATE =
 struct
-  structure frame = MipsFrame
+  structure Frame = MipsFrame
   structure Tr = Tree
   structure Tp = Temp
 

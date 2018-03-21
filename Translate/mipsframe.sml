@@ -41,6 +41,9 @@ struct
     Tree.MEM(Tree.BINOP(Tree.PLUS, Temp.TEMP(fp), Tree.CONST(k)))
     | exp (InReg(t: Temp.temp)) _ = Tree.TEMP(t)
   
+  datatype frag = PROC of {body: Tree.stm, frame: frame}
+                | STRING of Temp.label * string
+
   fun procEntryExit1 (frame: frame, body: Tree.stm) = body
       
 

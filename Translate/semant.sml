@@ -12,7 +12,7 @@ sig
 
   val transTy : tenv * Absyn.ty -> Types.ty
 
-  val transProg : Absyn.exp -> unit
+  val transProg : Absyn.exp -> Translate.frag list
 
 end
 
@@ -23,6 +23,7 @@ struct
   structure Err = ErrorMsg
   structure A = Absyn
   structure Ty = Types
+  structure Tp = Temp
   structure E = Env
   structure S = Symbol
   structure R = Translate
