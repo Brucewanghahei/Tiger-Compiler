@@ -4,11 +4,11 @@ sig
   type tenv 
   type expty
 
-  val transVar : venv * tenv * Absyn.var -> expty
+  val transVar : venv * tenv * Absyn.var * Translate.level -> expty
 
-  val transExp : venv * tenv * Absyn.exp -> expty
+  val transExp : venv * tenv * Absyn.exp * Translate.level * Temp.label -> expty
 
-  val transDec : venv * tenv * Absyn.dec -> {venv: venv, tenv: tenv}
+  val transDec : venv * tenv * Absyn.dec * Translate.level * Temp.label -> {venv: venv, tenv: tenv}
 
   val transTy : tenv * Absyn.ty -> Types.ty
 
@@ -84,7 +84,7 @@ struct
       A.SimpleVar(symbol, _) => 
         (
         case S.look(venv, symbol) of 
-          SOME(E.VarEntry {ty=_, assignable=assignable}) => 
+          SOME(E.VarEntry {access, ty, assignable}) => 
             assertEq(assignable, true, op =, err pos, "variable not assignable: " ^ S.name symbol)
         | _ => ()
         )
@@ -115,8 +115,8 @@ struct
   (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
-         SOME(E.VarEntry{ty=ty, assignable= _}) => {exp=(), ty=ty}
-       | _ => (err pos ("Undefined variable " ^ (S.name symbol)); {exp=(), ty=Ty.INT}) 
+         SOME v => SOME v
+       | NONE => (err pos ("Undefined variable " ^ (S.name symbol)); NONE)
 
   (* use Ty.UNIT as dummy return value *)
   fun lookupRecordFieldType(sym_ty_list:((S.symbol * Ty.ty) list), id:S.symbol, pos) =
@@ -170,9 +170,12 @@ struct
     f(formals, args)
   end
 
-  fun transVar(venv:venv, tenv:tenv, var:A.var) =
+  fun transVar(venv:venv, tenv:tenv, var:A.var, level) =
   let
-    fun trvar(A.SimpleVar(sym, pos)) = lookupVariable(venv, sym, pos)
+      fun trvar(A.SimpleVar(sym, pos)) =
+          case lookupVariable(venv, sym, pos) of
+              SOME {access, ty, assignable} => R.simpleVar(access, level)
+            | NONE => R.simpleVar(R.allocLocal level true) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
           val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
@@ -207,7 +210,7 @@ struct
     trvar var
   end
 
-  and transExp(venv:venv, tenv:tenv, exp:A.exp) =
+  and transExp(venv:venv, tenv:tenv, exp:A.exp, level, breakLabel) =
   let fun trexp (A.OpExp{left, oper, right, pos}) =
       let
         val {exp=_, ty=lty} = trexp left;
@@ -228,8 +231,8 @@ struct
           )
       )
       end
-    | trexp (A.IntExp int) =
-      {exp=(), ty=Ty.INT}
+    | trexp (A.IntExp x) =
+      {exp=R.intlit x, ty=Ty.INT}
     | trexp (A.LetExp {decs, body, pos}) =
       let
         val {venv=venv', tenv=tenv'} =
@@ -268,9 +271,9 @@ struct
     | trexp (A.VarExp var) =
       transVar(venv, tenv, var)
     | trexp (A.NilExp) =
-      {exp=(), ty=Ty.NIL}
+      {exp=R.nilkw, ty=Ty.NIL}
     | trexp (A.StringExp (str, pos)) =
-      {exp=(), ty=Ty.STRING}        
+      {exp=R.strlit str, ty=Ty.STRING}        
     | trexp (A.CallExp {func, args, pos}) =
       (
       let
@@ -549,8 +552,8 @@ struct
     end
     
     and transProg (exp) =
-    (
-    transExp(E.base_venv, E.base_tenv, exp);
-    ()
-    )
+        let val mainlevel = R.newLevel {parent = R.outermost, name = Temp.namedlabel "main", escapes = []}
+        in
+            transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newLabel());
+            ()
 end
