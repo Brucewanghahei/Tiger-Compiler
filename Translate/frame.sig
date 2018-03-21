@@ -11,4 +11,6 @@ sig
   val FP : Temp.temp
   val wordSize: int
   val exp : access -> Tree.exp -> Tree.exp
+  
+  val procEntryExit1 : frame * Tree.stm -> Tree.stm 
 end
