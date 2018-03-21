@@ -25,6 +25,7 @@ struct
   structure Ty = Types
   structure E = Env
   structure S = Symbol
+  structure R = Translate
   val err = Err.error
 
   type venv = E.venv
