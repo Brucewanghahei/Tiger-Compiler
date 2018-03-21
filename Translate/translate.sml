@@ -49,5 +49,21 @@ struct
 
   fun allocLocal (level(level_opt, frame, uniq)) escape =
     access(level(level_opt, frame, uniq), Frame.allocLocal(frame, escape))
+  
+
+  fun trace_levels (inside_level, outside_level, fp) offset =
+  let
+    fun trace (curr_level(SOME(parent_level), _, curr_uniq_ref), target_level(_, _,
+      target_uniq_ref)) exp =
+      if curr_uniq_ref = target_uniq_ref then
+        Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.CONST(offset), exp)) 
+      else
+        (* static link offset is 0 *)
+        trace (parent_level, target_level) (Tr.MEM exp)
+  in
+    trace (inside_level, outside_level, Tr.TEMP(fp))
+  end
+
+
 
 end

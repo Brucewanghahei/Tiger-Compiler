@@ -173,10 +173,10 @@ struct
 
   fun transVar(venv:venv, tenv:tenv, var:A.var, level) =
   let
-      fun trvar(A.SimpleVar(sym, pos)) =
+      fun trvar(A.SimpleVar(sym, pos)) = (
           case lookupVariable(venv, sym, pos) of
               SOME {access, ty, assignable} => R.simpleVar(access, level)
-            | NONE => R.simpleVar(R.allocLocal level true) (* dummy pattern match*)
+            | NONE => R.simpleVar(R.allocLocal level true)) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
           val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
@@ -557,4 +557,5 @@ struct
         in
             transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newLabel());
             ()
+        end
 end
