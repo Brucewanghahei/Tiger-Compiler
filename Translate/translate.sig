@@ -14,4 +14,10 @@ sig
 
     val formals : level -> access list
     val allocLocal : level -> bool -> access
+
+    (* construct Tree *)
+    val nilkw: exp
+    val intlit: int -> exp
+    val strlit: string -> exp
+    val simpleVar: access * level -> exp
 end
