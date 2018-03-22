@@ -185,7 +185,7 @@ struct
             let
               val (ty, k) = lookupRecordFieldType(sym_ty_list, sym, pos)
             in
-              {exp=R.subVar(base_pointer, R.transConst(k)), ty=ty}
+              {exp=R.subVar(base_pointer, R.intlit(k)), ty=ty}
             end
           | _ => 
             (
@@ -201,7 +201,7 @@ struct
             Ty.ARRAY (ty, uni) =>
             let
               val {exp=k_exp, ty=ty} = transExp(venv, tenv, exp)
-              val _ = checkInt(ty, pos, " array index should integer");
+              val _ = assertTypeEq(ty, Ty.INT, err pos, "Array index type should integer");
             in
               {exp=R.subVar(base_pointer, k_exp), ty=ty}          
             end
@@ -294,19 +294,20 @@ struct
       )
     | trexp (A.ArrayExp {typ, size, init, pos}) =
       let
-        val {exp=_, ty=initTy} = trexp init
+        val {exp=init_exp, ty=initTy} = trexp init
+        val {exp=size_exp, ty=sizeTy} = trexp size
       in
         (
-        checkInt(trexp size, pos, "Array size must be INT");
+        assertTypeEq(sizeTym, Ty.INT, err pos, "Array size must be INT");
 	    (case (lookActualType(tenv, typ, pos)) of
 	      Ty.ARRAY(actTy, unique) =>
 	      (assertTypeEq(actTy, initTy, err pos,
           "Type mismatch between initial type and array type.\n"
           ^ "Array type: " ^ (Ty.name (lookType(tenv, typ, pos)))
           ^ "\nInit type: " ^ (Ty.name initTy) );
-		  {exp=(), ty=lookType(tenv, typ, pos)})
+		  {exp=R.createArray(init_exp, size_exp), ty=lookType(tenv, typ, pos)})
 	    | _ => (err pos ("Invalid ARRAY type");
-	        {exp=(), ty=Ty.UNIT})
+	        {exp=R.dummy_exp, ty=Ty.UNIT})
         )
         )
       end
@@ -360,33 +361,38 @@ struct
       )
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
-          val fieldsTy = lookActualType(tenv, typ, pos)
-          val fields1 = map (fn (symbol,exp,pos) => (symbol,
-          (#ty (trexp(exp))))) fields 
-          val names1 = map #1 fields1
-          val types1 = map actual_ty (map #2 fields1)
+        val recordTy = lookActualType(tenv, typ, pos)
+        val ini_fields = map (fn (symbol,exp,pos) => (symbol, trexp exp, pos)) fields 
+        val ini_exps = map #exp (#2 ini_fields) 
       in
-      (case fieldsTy of
-          Types.RECORD(fields2, unique) =>
+      (case recordTy of
+          Types.RECORD(def_fields, unique) =>
           let
-              val names2 = map #1 fields2
-              val types2 = map actual_ty (map #2 fields2)
-          in
-              if names1 = names2 then
-                  if (ListPair.all
-                      (fn (type1, type2) => compareAnyType (type1, type2))
-                      (types1, types2))
-                  then
-                      {exp=(), ty=lookType(tenv, typ, pos)}
-                  else
-                      (err pos ("Inconsistent fields type: " ^ S.name typ);
-                      {exp=(), ty=Ty.UNIT})
+            fun check (ini_field::ini_tail, def_field::def_tail) =
+            let
+              val ini_id = #1 ini_field and def_id = #1 def_field
+              val ini_ty = #ty (#2 ini_field) and def_ty = #2 def_field
+              val pos = #3 ini_fields
+            in
+              if compareAnyType(ini_ty, ini_id) andalso ini_id = def_id then
+                check (ini_tail, def_tail)
               else
-                  (err pos ("Inconsistent fields type: " ^ S.name typ);
-                  {exp=(), ty=Ty.UNIT})
+                (err pos ("Inconsistent fields type: " ^ S.name typ);
+                false)
+            end
+              | check ([], [_]) = (err pos ("Need more fileds for the record: "
+              ^ S.name typ); false)
+              | check ([_], []) = (err pos ("Too many fileds for the record: "
+              ^ S.name typ); false)
+              | check ([], []) = true
+          in
+            if check(ini_fields, def_fields) then
+              {exp=R.createRecord(ini_exps), ty=lookType(typ)}
+            else
+              {exp=R.dummy_exp(), ty=Ty.UNIT}
           end
           | _ => (err pos ("Invalid RECORD type: " ^ S.name typ);
-          {exp=(), ty=Ty.UNIT}))
+          {exp=R.dummy_exp(), ty=Ty.UNIT}))
       end
     in
       trexp exp

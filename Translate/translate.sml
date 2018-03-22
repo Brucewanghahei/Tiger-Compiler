@@ -51,9 +51,10 @@ struct
   fun formals (level(level_opt, frame, uniq)) =
     Frame.formals(frame)
 
+  fun intlit(i) = Ex(Tr.CONST(i))
+
   fun allocLocal (level(level_opt, frame, uniq)) escape =
-    access(level(level_opt, frame, uniq), Frame.allocLocal(frame, escape))
-  
+    access(level(level_opt, frame, uniq), Frame.allocLocal(frame, escape))  
 
   fun trace_levels (inside_level, outside_level, fp) access =
   let
@@ -67,6 +68,10 @@ struct
   in
     trace (inside_level, outside_level, Tr.TEMP(fp))
   end
+
+  fun seq tree_exp::tree_exp_tail =
+    Tr.SEQ(tree_exp, seq tree_exp_tail)
+    | seq tree_exp = tree_exp
   
   fun simpleVar (access(def_lev, fr_acc), call_lev) =
     trace_levels (call_lev, def_lev, Frame.FP) fr_acc
@@ -74,7 +79,13 @@ struct
   fun subVar (base_fp: exp, offset: exp) =
     Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))
 
-  fun transConst(i) = Ex(Tr.CONST(i))
+  fun assign (vExp, eExp) = Nx(Tr.MOVE(vExp, eExp))
+
+  fun move base offset rval = Tr.MOVE(Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base),
+    Tr.CONST(offset))), rval)
+
+  fun createArray(init_exp, size_exp) = 
+    CALL(NAME(Temp.namedlebel("initArray")), [size_exp, init_exp])
     
   fun strlit s =
       let
@@ -92,4 +103,16 @@ struct
                           Ex(Tree.NAME(newLabel))
                       end
       end
+
+  fun createRecord field_list =
+  let
+    val base = Temp.newtemp()
+    val head = Tr.MOVE(Tr.TEMP(base), Frame.externalCall("malloc",
+    [Tr.CONST(List.length field_list)]))
+    val nodes = List.rev(foldl (fn (field, (nodes, k)) => 
+      ((move base k field)::nodes, k+1)) ([], 0) filed_list)
+  in
+    Ex(Tr.ESEQ(seq (head::nodes), Tr.TEMP(base)))
+  end
+
 end
