@@ -120,24 +120,25 @@ struct
        | NONE => (err pos ("Undefined variable " ^ (S.name symbol)); NONE)
 
   (* use Ty.UNIT as dummy return value *)
-  fun lookupRecordFieldType(sym_ty_list:((S.symbol * Ty.ty) list), id:S.symbol, pos) =
+  fun lookupRecordField(sym_ty_list:((S.symbol * Ty.ty) list), id:S.symbol, pos)
+    : (Ty.ty * int) =
     case 
       (
       foldl
-        (fn ((field, field_ty),(id, id_ty_opt)) =>
+        (fn ((field, field_ty), (id, id_ty_opt, k)) =>
           (
           case id_ty_opt of
-              NONE => if field = id then (id, SOME(field_ty))
-                                                 else (id, NONE)  
-            | SOME(id_ty) => (id, id_ty_opt) 
+              NONE => if field = id then (id, SOME(field_ty), k)
+                                                 else (id, NONE, k+1)  
+            | SOME(id_ty) => (id, id_ty_opt, k) 
           )
         )
-        (id, NONE) sym_ty_list
+        (id, NONE, 0) sym_ty_list
       ) of
-      (id, SOME(field_ty)) => actual_ty(field_ty)
-    | (id, NONE) => (
+      (id, SOME(field_ty), k) => (field_ty, k)
+    | (id, NONE, _) => (
         err pos ("Field " ^ (S.name id) ^ " not found");
-        Ty.UNIT
+        (Ty.UNIT, 0)
         )
       
 
@@ -173,38 +174,44 @@ struct
 
   fun transVar(venv:venv, tenv:tenv, var:A.var, level) =
   let
-      fun trvar(A.SimpleVar(sym, pos)) = (
+      fun trvar(A.SimpleVar(sym, pos)) = ( 
           case lookupVariable(venv, sym, pos) of
-              SOME {access, ty, assignable} => R.simpleVar(access, level)
-            | NONE => R.simpleVar(R.allocLocal level true)) (* dummy pattern match*)
+              SOME {access, ty, assignable} => {exp=R.simpleVar(access, level), ty=ty}
+            | NONE => {exp=R.simpleVar ((R.allocLocal level true), level),
+            ty=Ty.INT} ) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
-          val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
+          val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
         in
           case actual_ty lvalue_ty of
-               Ty.RECORD (sym_ty_list, uni) =>
-               {exp=(), ty=lookupRecordFieldType(sym_ty_list,
-               sym, pos)}
-             | _ => 
-                (
-                err pos "Record requried";
-                {exp=(), ty=Ty.UNIT}
-                )
+            Ty.RECORD (sym_ty_list, uni) =>
+            let
+              val (ty, k) = lookupRecordFieldType(sym_ty_list, sym, pos)
+            in
+              {exp=R.subVar(base_pointer, R.transConst(k)), ty=ty}
+            end
+          | _ => 
+            (
+            err pos "Record requried";
+            {exp=R.dummy_exp, ty=Ty.UNIT}
+            )
         end
       | trvar(A.SubscriptVar(lvalue, exp, pos)) =
         let 
-          val {exp=_, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
+          val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
         in
           case actual_ty lvalue_ty of
             Ty.ARRAY (ty, uni) =>
-              (
-              checkInt(transExp(venv, tenv, exp), pos, "");
-              {exp=(), ty=ty}          
-              )
+            let
+              val {exp=k_exp, ty=ty} = transExp(venv, tenv, exp)
+              val _ = checkInt(ty, pos, " array index should integer");
+            in
+              {exp=R.subVar(base_pointer, k_exp), ty=ty}          
+            end
           | _ =>
               (
               err pos "Array required";
-              {exp=(), ty=Ty.UNIT}
+              {exp=R.dummy_exp, ty=Ty.UNIT}
               )
         end
   in
