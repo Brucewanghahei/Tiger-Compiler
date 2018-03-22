@@ -113,7 +113,6 @@ struct
           NONE => (err pos ("Type " ^ S.name symbol ^ " not found"); Ty.NIL)
         | SOME ty => ty
 
-  (* use Ty.INT as dummy return value *)
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
          SOME v => SOME v
@@ -148,12 +147,10 @@ struct
   fun checkNoValue ({exp, ty}, pos, extra_info) =
     assertTypeEq (ty, Ty.UNIT, err pos, "no-value(UNIT) required: " ^ extra_info)
     
-  (* use E.FunEntry {...} as dummy return value *)
-  (* If error, exit ? or return dummy entry ? *)
   fun lookupFunEntry (venv:venv, func:S.symbol, pos) = 
     case S.look(venv, func) of
-         SOME fun_entry => fun_entry
-       | NONE => (err pos ("Function " ^ (S.name func) ^ " not found"); E.FunEntry {formals = [], result = Ty.UNIT})
+         SOME fun_entry => SOME fun_entry
+       | NONE => (err pos ("Function " ^ (S.name func) ^ " not found"); NONE)
 
   fun checkFuncParams (func_name:string, formals: (S.symbol*Ty.ty) list, args: Ty.ty list, pos) = 
   let
@@ -278,10 +275,14 @@ struct
     | trexp (A.CallExp {func, args, pos}) =
       (
       let
-        val E.FunEntry{formals=formals, result=result} = lookupFunEntry(venv, func, pos)
-        val () = checkFuncParams(S.name func, formals, map #ty (map trexp args), pos)
+        val entry = lookupFunEntry(venv, func, pos)
+        val result = case entry of SOME {result, ...} => result
+                                 | NONE => Ty.NIL
       in
-        {exp=(), ty=result}
+          (case entry of
+               SOME {formals, ...} => checkFuncParams(S.name func, formals, map #ty (map trexp args), pos)
+             | NONE => ());
+          {exp=(), ty=result}
       end
       )
     | trexp (A.ArrayExp {typ, size, init, pos}) =
