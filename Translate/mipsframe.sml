@@ -44,7 +44,9 @@ struct
   datatype frag = PROC of {body: Tree.stm, frame: frame}
                 | STRING of Temp.label * string
 
+  fun externalCall (name, args) =
+      Tree.CALL(T.NAME(Temp.namedlabel name), args)
+
   fun procEntryExit1 (frame: frame, body: Tree.stm) = body
-      
 
 end
