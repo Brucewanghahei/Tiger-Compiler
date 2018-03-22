@@ -479,15 +479,20 @@ struct
                   assertEq(checkTyDecCycle(tenv', tydecs), false, op =, err 0, msgTmpl ^ " cycle(no record/array) detected in mutual recursion");
                   {
                     venv = venv,
-                    tenv = tenv'
+                    tenv = tenv',
+                    exps = []
                   }
               end
             | trdec (A.FunctionDec fundecs) =
               let
                   val msgTmpl = "FunDec: "
-                  fun trParams params = map (fn {name, typ, pos, escape} =>
-                                        (name, lookType(tenv,typ, pos)))
-                                        params
+                  fun trParams (params, level) =
+                      {
+                        nameTys = (map #name params,
+                                   map (fn {typ, ...} => lookType(tenv, typ, pos)) params),
+                        escapes = map (fn {escape, ...} => !escape)  params,
+                        accesses = R.formals level
+                      }
                   (* first pass to scan headers*)
 
                   fun trResult NONE = Ty.UNIT
@@ -503,15 +508,22 @@ struct
                                   (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
                                       let
                                           val resultTy = trResult result
-                                          val paramNameTys = trParams params
+                                          val {nameTys, escapes, ...} = trParams params
+                                          val newLabel = Tp.newLable
+                                          val entry = E.FunEntry{
+                                                  level = R.newLevel{parent = level, name = newLable, escapes = escapes},
+                                                  label = newLabel,
+                                                  formals = nameTys,
+                                                  result = resultTy
+                                              }
                                       in
                                           (
-                                            S.enter(acc, name, E.FunEntry{formals = paramNameTys, result = resultTy}),
+                                            S.enter(acc, name, entry),
                                             case S.look(accTemp, name) of
                                                 SOME _ => (err ~1
                                                                (msgTmpl ^ "same mutually recursive function declaration");
                                                            accTemp)
-                                              | NONE => S.enter(accTemp, name, E.FunEntry{formals = paramNameTys, result = resultTy})
+                                              | NONE => S.enter(accTemp, name, entry)
                                           )
                                       end)
                                   (venv, S.empty)
@@ -526,16 +538,19 @@ struct
                   fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
                       let
                           val resultTy = trResult result
-                          val paramNameTys = trParams params
-                          fun enterParam ((name, ty), venv:venv) =
-                              S.enter(venv, name, E.VarEntry{ty = ty, assignable = true})
-                          val venv' = foldl enterParam venv paramNameTys
-                          val bodyTy = #ty (transExp(venv', tenv, body))
+                          val {nameTys, accesses, ...} = trParams params
+                          fun enterParam (((name, ty), access), venv:venv) =
+                              S.enter(venv, name, E.VarEntry{access = access, ty = ty, assignable = true})
+                          val venv' = foldl enterParam venv ListPair.zip(nameTys, accesses)
+                          val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body)
                       in
                           assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
                           (S.name name) ^ " type mismatch.\nReturn type: " ^
                           (Ty.name resultTy) ^ "\nBody type: " ^ (Ty.name
                           bodyTy))
+                        ;
+                          (case lookupFunEntry(venv, name, pos) of
+                                SOME{level, ...} => R.procEntryExit1(bodyExp, level))
                       end
               in
                   map (fn dec => trFunDecBody(venv', dec)) fundecs;
