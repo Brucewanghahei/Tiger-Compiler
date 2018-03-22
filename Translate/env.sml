@@ -21,7 +21,7 @@ struct
   type access = unit (* todo: unknown *)
   type ty = T.ty
   datatype enventry = VarEntry of {access:Translate.access, ty: ty, assignable: bool}
-                    | FunEntry of {level: Translate.access,
+                    | FunEntry of {level: Translate.level,
                                    label: Temp.label,
                                    formals: (S.symbol * ty) list, result: ty}
 
