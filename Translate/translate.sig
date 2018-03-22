@@ -20,7 +20,6 @@ sig
 
     (* construct Tree *)
     val nilkw: exp
-    val nilExp: exp
     val intlit: int -> exp
     val strlit: string -> exp
     val simpleVar: access * level -> exp
@@ -33,6 +32,13 @@ sig
     val procEntryExit1: exp * level -> unit
 
     (* utility functions *)
+    val nilExp: unit -> exp
+    val whileExp: (exp * exp) -> exp
+    val breakExp: Tree.label -> exp
+    val ifExp: (exp * exp) -> exp
+    val ifelseExp: (exp * exp * exp) -> exp
+    val forExp: (exp * Tree.label * exp * exp * exp) -> exp
+    
     (* call_level * definition_level * current_fp -> access -> IR *) 
     val trace_levels: (level * level * Temp.temp) -> Frame.access -> Tree.exp
     val dummy_exp : exp
