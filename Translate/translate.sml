@@ -98,17 +98,17 @@ struct
                                   !fragments
       in
           case sfrag of
-              SOME (Frame.STRING(label, _)) => Ex(Tree.NAME(label))
-            | NONE => let val newLabel = Temp.newLabel()
+              SOME (Frame.STRING(label, _)) => Ex(Tr.NAME(label))
+            | NONE => let val newLabel = Tp.newLabel()
                       in
                           fragments := Frame.STRING(newLabel, s)::!fragments;
-                          Ex(Tree.NAME(newLabel))
+                          Ex(Tr.NAME(newLabel))
                       end
       end
 
   fun createRecord field_list =
   let
-    val base = Temp.newtemp()
+    val base = Tp.newtemp()
     val head = Tr.MOVE(Tr.TEMP(base), Frame.externalCall("malloc",
     [Tr.CONST(List.length field_list)]))
     val nodes = List.rev(foldl (fn (field, (nodes, k)) => 
@@ -127,14 +127,70 @@ struct
 
   fun breakExp bL = Nx(Tr.JUMP(Tr.NAME(bL), [bL]))
 
-  fun ifExp (e1, e2) =
+  fun ifExp (cond, thenExp) =
       let
+        val cond = unCx(cond)
+        val r = Tp.newtemp()
+        val thenLabel = Tp.newLabel()
+        val endLabel = Tp.newLabel()
       in
+        case (cond, thenExp) of
+          (_, Cx _) =>
+            Cx (fun (t, f) =>
+              seq[(cond) (thenLabel, endLabel),
+                  Tr.LABEL(thenLabel),
+                  (unCx thenExp) (t, f),
+                  Tr.LABEL(endLabel)])
+          | (_, Nx _) =>
+            Nx (seq[(cond) (thenLabel, endLabel),
+                Tr.LABEL(thenLabel),
+                unNx thenExp,
+                Tr.LABEL(endLabel)])
+          | (_, Ex _) =>
+            Ex (Tr.ESEQ
+                (seq[(cond) (thenLabel, endLabel),
+                  Tr.LABEL(thenLabel),
+                  Tr.MOVE (Tr.TEMP(r), thenExp),
+                  Tr.LABEL(endLabel)],
+                Tr.TEMP(r)))
+          | => Error.impossible "Invalid thenExp type"
       end
 
-  fun ifelseExp (e1, e2, e3) =
+  fun ifelseExp (cond, thenExp, elseExp) =
       let
+        val cond = unCx(cond)
+        val r = Tp.newtemp()
+        val thenLabel = Tp.newLabel()
+        val elseLabel = Tp.newLabel()
+        val endLabel = Tp.newLabel()
       in
+        case (cond, thenExp, elseExp) of
+          (_, Cx _, Cx_) =>
+            Cx (fun (t, f) =>
+              seq[(cond) (thenLabel, elseLabel),
+                  Tr.LABEL(thenLabel),
+                  (unCx thenExp) (t, f),
+                  Tr.LABEL(elseLabel),
+                  (unCx elseExp) (t, f)])
+          | (_, Nx _, Nx _) =>
+            Nx (seq[(cond) (thenLabel, elseLabel),
+                Tr.LABEL(thenLabel),
+                unNx thenExp,
+                Tr.JUMP(Tr.NAME(endLabel), [endLabel]),
+                Tr.LABEL(elseLabel),
+                unNx elseExp,
+                Tr.LABEL(endLabel)])
+          | (_, Ex _, Ex _) =>
+            Ex (Tr.ESEQ
+                (seq[(cond) (thenLabel, elseLabel),
+                  Tr.LABEL thenLabel,
+                  Tr.MOVE(Tr.TEMP(r), unExp thenExp),
+                  Tr.JUMP(Tr.NAME(endLabel), [endLabel]),
+                  Tr.LABEL(elseLabel),
+                  Tr.MOVE(Tr.TEMP(r), unEx elseExp),
+                  Tr.LABEL(endLabel)],
+                Tr.TEMP r))
+          | _ => Error.impossible "Type mismatch between thenExp and elseExp"
       end
 
   fun forExp
