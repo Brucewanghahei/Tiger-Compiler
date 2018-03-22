@@ -240,10 +240,18 @@ struct
       {exp=R.intlit x, ty=Ty.INT}
     | trexp (A.LetExp {decs, body, pos}) =
       let
-        val {venv=venv', tenv=tenv'} =
-        foldl (fn (a,b) => transDec(#venv b, #tenv b, a)) {venv=venv, tenv=tenv} decs
+        val {venv=venv', tenv=tenv', exps=dec_exps} =
+          foldl (fn (a,b) => 
+          let
+            val {venv=venv, tenv=tenv, exps=exps} = 
+            transDec(#venv b, #tenv b, a, level, breakLabel)
+          in
+            {venv=venv, tenv=tenv, exps=(#exps b)@exps}
+          end)
+          {venv=venv, tenv=tenv, exps=[]} decs
+        {exp=body_exp, ty=body_ty} = transExp(venv', tenv', body)
       in
-        transExp(venv', tenv', body)
+        {exp=R.letexp(dec_exps, body_exp), ty=body_ty}
       end
     | trexp (A.SeqExp seq) =
       let

@@ -117,6 +117,9 @@ struct
     Ex(Tr.ESEQ(seq (head::nodes), Tr.TEMP(base)))
   end
 
+  fun letexp (dec_exps, body_exp) = 
+    Ex(Tr.ESEQ(seq (map unNx dec_exps), unEx body_exp))
+
   fun whileExp (test, body) =
       let
       in

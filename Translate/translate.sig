@@ -27,6 +27,7 @@ sig
     val subVar: exp * exp -> exp
     val createArray : exp * exp -> exp
     val createRecord: exp list -> exp
+    val letexp: exp list * exp -> exp
 
     (* function declaration *)
     val procEntryExit1: exp * level -> unit
