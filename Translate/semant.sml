@@ -8,7 +8,7 @@ sig
 
   val transExp : venv * tenv * Absyn.exp * Translate.level * Temp.label -> expty
 
-  val transDec : venv * tenv * Absyn.dec * Translate.level * Temp.label -> {venv: venv, tenv: tenv}
+  val transDec : venv * tenv * Absyn.dec * Translate.level * Temp.label -> {venv: venv, tenv: tenv, exps: Translate.exp list}
 
   val transTy : tenv * Absyn.ty -> Types.ty
 
@@ -384,31 +384,30 @@ struct
       trexp exp
     end
 
-    and transDec (venv:venv, tenv:tenv, dec:A.dec) =
-      let fun trdec (A.VarDec{name, typ = NONE, init, pos, ...}) =
+    and transDec (venv, tenv, dec, level, breakLabel) =
+      let fun trdec (A.VarDec{name, escape, typ, init, pos, ...}) =
               let val {exp, ty} = transExp(venv, tenv, init)
                   val msgTmpl = "VarDec: "
+                  (* translate *)
+                  val access = R.allocLocal level !escape
+                  val varexp = R.simpleVar(access, level)
               in
-                  assertEq(actual_ty ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
-                  {
-                    venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable = true}),
-                    tenv = tenv
-                  }
-              end
-            | trdec (A.VarDec{name, typ = SOME(s, _), init, pos, ...}) = 
-              let 
-                  val {exp, ty} = transExp(venv, tenv, init)
-                  val msgTmpl = "VarDec: "
-                  val decTy = lookType(tenv, s, pos)
-              in
-                  assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
-                  ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
-                  ^ "\nInit type: " ^ (Ty.name ty));
-                  {
-                    venv = S.enter(venv, name, E.VarEntry{ty = decTy, assignable
-                    = true}),
-                    tenv = tenv
-                  }
+                  case typ of
+                      SOME(s, _) =>
+                      let 
+                          val decTy = lookType(tenv, s, pos)
+                      in
+                          assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
+                                                           ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
+                                                           ^ "\nInit type: " ^ (Ty.name ty))
+                      end
+                    | NONE => assertEq(actual_ty ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly")
+                ;
+                        {
+                          venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable = true}),
+                          tenv = tenv,
+                          exps = [R.assign(varexp, exp)]
+                        }
               end
             | trdec (A.TypeDec(tydecs)) =
               let
