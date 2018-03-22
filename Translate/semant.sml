@@ -174,7 +174,7 @@ struct
       fun trvar(A.SimpleVar(sym, pos)) = ( 
           case lookupVariable(venv, sym, pos) of
               SOME {access, ty, assignable} => {exp=R.simpleVar(access, level), ty=ty}
-            | NONE => {exp=R.simpleVar ((R.allocLocal level true), level),
+            | NONE => {exp=R.dummy_exp,
             ty=Ty.INT} ) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
@@ -386,10 +386,10 @@ struct
             if check(ini_fields, def_fields) then
               {exp=R.createRecord(ini_exps), ty=lookType(typ)}
             else
-              {exp=R.dummy_exp(), ty=Ty.UNIT}
+              {exp=R.dummy_exp, ty=Ty.UNIT}
           end
           | _ => (err pos ("Invalid RECORD type: " ^ S.name typ);
-          {exp=R.dummy_exp(), ty=Ty.UNIT}))
+          {exp=R.dummy_exp, ty=Ty.UNIT}))
       end
     in
       trexp exp
