@@ -28,6 +28,8 @@ sig
     val createArray : exp * exp -> exp
     val createRecord: exp list -> exp
     val letexp: exp list * exp -> exp
+    val arithOp : Absyn.oper * exp * exp -> exp
+    val compOp : Absyn.oper * exp * exp -> exp
 
     (* function declaration *)
     val procEntryExit1: exp * level -> unit

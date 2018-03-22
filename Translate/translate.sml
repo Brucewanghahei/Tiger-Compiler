@@ -3,6 +3,7 @@ struct
   structure Frame = MipsFrame
   structure Tr = Tree
   structure Tp = Temp
+  structure A = Absyn
 
   datatype exp = Ex of Tr.exp
                | Nx of Tr.stm
@@ -119,6 +120,35 @@ struct
 
   fun letexp (dec_exps, body_exp) = 
     Ex(Tr.ESEQ(seq (map unNx dec_exps), unEx body_exp))
+
+  fun arithOp (oper, lexp, rexp) =
+  let
+    fun gen oper = Ex(Tr.BINOP(oper, unEx lexp, unEx rexp))
+    fun ari A.PlusOp = gen Tr.PLUS
+      | ari A.MinusOp = gen Tr.MINUS
+      | ari A.TimesOp = gen Tr.MUL
+      | ari A.DivideOp = gen Tr.DIV
+      | ari _ = (Error.impossible "arithOp not support";
+                dummy_exp)
+  in
+    ari oper
+  end
+
+  fun compOp (oper, lexp, rexp) =
+  let
+    fun gen oper = Cx(
+      fn (t,f) => Tr.CJUMP(oper, unEx lexp, unEx rexp, t, f))
+    fun comp A.EqOp = gen Tr.EQ
+      | comp A.NeqOp = gen Tr.NE
+      | comp A.LtOp = gen Tr.LT
+      | comp A.LeOp = gen Tr.LE
+      | comp A.GtOp = gen Tr.GT
+      | comp A.GeOp = gen Tr.GE
+      | comp _ = (Error.impossible "compOp not support";
+                dummy_exp)
+  in
+    comp oper
+  end
 
   fun whileExp (test, body) =
       let

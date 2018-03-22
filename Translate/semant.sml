@@ -218,8 +218,8 @@ struct
   and transExp(venv:venv, tenv:tenv, exp:A.exp, level, breakLabel) =
   let fun trexp (A.OpExp{left, oper, right, pos}) =
       let
-        val {exp=_, ty=lty} = trexp left;
-        val {exp=_, ty=rty} = trexp right;
+        val {exp=lexp, ty=lty} = trexp left;
+        val {exp=rexp, ty=rty} = trexp right;
       in
       (
         case oper of
@@ -227,12 +227,12 @@ struct
             assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type" ^
             " mismatch\n" ^ "left operand: " ^ (Ty.name lty) ^"\nright operand: " ^
             (Ty.name rty));
-            {exp=(), ty=Ty.INT}
+            {exp=R.compOp(oper, lexp, rexp), ty=Ty.INT}
           )
            | (A.PlusOp | A.MinusOp | A.TimesOp | A.DivideOp) => (
             assertTypeEq(Ty.INT, lty, err pos, "left operand integer required");
             assertTypeEq(Ty.INT, rty, err pos, "right operand integer required");
-            {exp=(), ty=Ty.INT}
+            {exp=R.arithOp(oper, lexp, rexp), ty=Ty.INT}
           )
       )
       end
