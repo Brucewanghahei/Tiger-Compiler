@@ -23,4 +23,5 @@ sig
     val intlit: int -> exp
     val strlit: string -> exp
     val simpleVar: access * level -> exp
+    val assign: exp * exp -> exp
 end

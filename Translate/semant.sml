@@ -310,7 +310,7 @@ struct
         (
         assertAssignable(venv, var, pos); 
         assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
-        {exp=(), ty=Ty.UNIT}
+        {exp=R.assign(vExp, eExp), ty=Ty.UNIT}
         )
       end
     | trexp (A.WhileExp {test, body, pos}) =
