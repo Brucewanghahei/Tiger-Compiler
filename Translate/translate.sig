@@ -26,9 +26,12 @@ sig
     val assign: exp * exp -> exp
     val subVar: exp * exp -> exp
     val transConst: int -> exp
+    val createArray : exp * exp -> exp
+    val createRecord: exp list -> exp
 
     (* utility functions *)
     (* call_level * definition_level * current_fp -> access -> IR *) 
     val trace_levels: (level * level * Temp.temp) -> Frame.access -> Tree.exp
     val dummy_exp : exp
+    val seq: Tree.exp list -> Tree.exp
 end
