@@ -24,7 +24,14 @@ sig
     val strlit: string -> exp
     val simpleVar: access * level -> exp
     val assign: exp * exp -> exp
+    val subVar: exp * exp -> exp
+    val transConst: int -> exp
 
     (* function declaration *)
     val procEntryExit1: exp * level -> unit
+
+    (* utility functions *)
+    (* call_level * definition_level * current_fp -> access -> IR *) 
+    val trace_levels: (level * level * Temp.temp) -> Frame.access -> Tree.exp
+    val dummy_exp : exp
 end
