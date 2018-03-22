@@ -325,13 +325,15 @@ struct
     | trexp (A.WhileExp {test, body, pos}) =
       let
         val _ = loopLevel := !loopLevel + 1
+	val {exp=testExp, ty=_} = transExp (venv, tenv, test, level, breakLabel)
+	val {exp=bodyExp, ty=_} = transExp (venv, tenv, body, level, breakLable)
         val _ = loopLevel := !loopLevel - 1
         val _ = breakNum := 0
       in
         (
         checkInt(trexp test, pos, "Invalid WHILE loop test type, INT expected");
         checkNoValue(trexp body, pos, "Invalid WHILE loop body type, UNIT expected");
-        {exp=(), ty=Ty.UNIT}
+        {exp=(R.whileExp(testExp, bodyExp)), ty=Ty.UNIT}
         )
       end
     | trexp (A.BreakExp pos) =
@@ -341,24 +343,19 @@ struct
         (
         assertEq(!loopLevel, 0, op >, err pos, "Invalid BREAK");
         assertEq(!breakNum, 1, op =, err pos, "Can only BREAK once for a single loop");
-        {exp=(), ty=Ty.UNIT}
+        {exp=(R.breakExp(breakLabel)), ty=Ty.UNIT}
         )
       end
     | trexp (A.IfExp {test=test, then'=then', else'=else_opt, pos=pos}) =
       (case else_opt of
-           NONE =>
-           (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-            checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-            {exp=(), ty=Ty.UNIT})
-      | SOME(else') =>
-        let val thenTy = #ty (trexp then')
-            val elseTy = #ty (trexp else')
-        in
-            checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-            assertTypeEq(thenTy, elseTy, err pos, "IfExp THEN-ELSE type mismatch");
-            {exp=(), ty=thenTy}
-        end
-      )
+          NONE =>
+              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+              checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
+              {exp=(#exp (trexp test), #exp (trexp then')), ty=Ty.UNIT})
+          | SOME(else') =>
+              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
+              assertTypeEq(#ty (trexp then'), #ty (trexp else'), err pos, "IfExp THEN-ELSE type mismatch");
+              {exp=(#exp (trexp test), #exp (trexp then'), #exp (trexp else')), ty=thenTy}))
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
         val recordTy = lookActualType(tenv, typ, pos)

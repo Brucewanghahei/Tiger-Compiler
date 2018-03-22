@@ -8,8 +8,10 @@ struct
                | Nx of Tr.stm
                | Cx of Tp.label * Tp.label -> Tr.stm
 
-  val dummy_exp = Nx(Tree.EXP(Tree.CONST(0)))
-
+  val dummy_exp = Nx(Tr.EXP(Tr.CONST(0)))
+  
+  val nilExp = (Ex Tr.CONST(0))
+  
   fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f Tr.stm =
     seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
         genstm(t,f),
@@ -114,5 +116,24 @@ struct
   in
     Ex(Tr.ESEQ(seq (head::nodes), Tr.TEMP(base)))
   end
+
+  fun whileExp (test, body) =
+      let
+      in
+      end
+
+  fun breakExp bL = Nx(Tr.JUMP(Tr.NAME(bL), [bL]))
+
+  fun ifExp (e1, e2) =
+      let
+      in
+      end
+
+  fun ifelseExp (e1, e2, e3) =
+      let
+      in
+      end
+
+  fun forExp
 
 end
