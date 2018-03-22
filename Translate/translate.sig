@@ -28,6 +28,9 @@ sig
     val createArray : exp * exp -> exp
     val createRecord: exp list -> exp
 
+    (* function declaration *)
+    val procEntryExit1: exp * level -> unit
+
     (* utility functions *)
     (* call_level * definition_level * current_fp -> access -> IR *) 
     val trace_levels: (level * level * Temp.temp) -> Frame.access -> Tree.exp
