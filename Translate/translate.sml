@@ -49,6 +49,8 @@ struct
   fun formals (level(level_opt, frame, uniq)) =
     Frame.formals(frame)
 
+  fun intlit(i) = Ex(Tr.CONST(i))
+
   fun allocLocal (level(level_opt, frame, uniq)) escape =
     access(level(level_opt, frame, uniq), Frame.allocLocal(frame, escape))  
 
@@ -74,8 +76,6 @@ struct
 
   fun subVar (base_fp: exp, offset: exp) =
     Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))
-
-  fun transConst(i) = Ex(Tr.CONST(i))
 
   fun assign (vExp, eExp) = Nx(Tr.MOVE(vExp, eExp))
 

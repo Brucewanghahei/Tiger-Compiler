@@ -188,7 +188,7 @@ struct
             let
               val (ty, k) = lookupRecordFieldType(sym_ty_list, sym, pos)
             in
-              {exp=R.subVar(base_pointer, R.transConst(k)), ty=ty}
+              {exp=R.subVar(base_pointer, R.intlit(k)), ty=ty}
             end
           | _ => 
             (
