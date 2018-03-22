@@ -43,6 +43,8 @@ struct
 
   val outermost = level(NONE, Frame.newFrame(Tp.newLabel(), []) ,ref ())
 
+  val fragments: Frame.frag list ref = ref []
+
   fun newLevel {parent, name, escapes} =
     level(parent, Frame.newFrame(name, escapes), ref ())
 
@@ -74,6 +76,20 @@ struct
 
   fun transConst(i) = Ex(Tr.CONST(i))
     
-
-
+  fun strlit s =
+      let
+          val sfrag = List.find (fn e =>
+                                      case e of
+                                          Frame.PROC => false
+                                        | Frame.STRING(_, s') => s = s')
+                                  !fragments
+      in
+          case sfrag of
+              SOME (Frame.STRING(label, _)) => Ex(Tree.NAME(label))
+            | NONE => let val newLabel = Temp.newLabel()
+                      in
+                          fragments := Frame.STRING(newLabel, s)::!fragments;
+                          Ex(Tree.NAME(newLabel))
+                      end
+      end
 end
