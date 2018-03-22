@@ -24,4 +24,7 @@ sig
     val strlit: string -> exp
     val simpleVar: access * level -> exp
     val assign: exp * exp -> exp
+
+    (* function declaration *)
+    val procEntryExit1: exp * level -> unit
 end
