@@ -84,8 +84,8 @@ struct
   fun move base offset rval = Tr.MOVE(Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base),
     Tr.CONST(offset))), rval)
 
-  fun createArray(init_exp, size_exp) = 
-    CALL(NAME(Temp.namedlebel("initArray")), [size_exp, init_exp])
+  fun createArray (init_exp, size_exp) = 
+      Frame.externalCall("initArray", [size_exp, init_exp])
     
   fun strlit s =
       let
