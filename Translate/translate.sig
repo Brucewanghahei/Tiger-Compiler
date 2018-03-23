@@ -3,9 +3,9 @@ sig
     type exp
     type level
     type access (* not the same as Frame.access *)
+    type frag
 
     structure Frame : FRAME
-    type frag = Frame.frag
     val getResult : unit -> Frame.frag list
     val fragments : frag list ref
 

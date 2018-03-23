@@ -174,8 +174,8 @@ struct
       fun trvar(A.SimpleVar(sym, pos)) = ( 
           case lookupVariable(venv, sym, pos) of
               SOME (E.VarEntry{access=access, ty=ty, ...}) => {exp=R.simpleVar(access, level), ty=ty}
-            | NONE => {exp=R.dummy_exp,
-            ty=Ty.INT} ) (* dummy pattern match*)
+            | SOME _ => ((err pos "exptected variable, found function"); {exp=R.dummy_exp, ty=Ty.NIL})
+            | NONE => {exp=R.dummy_exp, ty=Ty.NIL} ) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
           val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue, level)
@@ -240,7 +240,7 @@ struct
       {exp=R.intlit x, ty=Ty.INT}
     | trexp (A.LetExp {decs, body, pos}) =
       let
-        val {venv=venv', tenv=tenv', exps=dec_exps} =
+          val {venv=venv', tenv=tenv', exps=dec_exps} =
           foldl (fn (a,b) => 
           let
             val {venv=venv, tenv=tenv, exps=exps} = 
@@ -611,9 +611,9 @@ struct
     and transProg (exp) =
         let val mainlevel =
           R.newLevel {parent = R.outermost, name = Temp.namedlabel "tiger_main", escapes = []}
-          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newlabel());
+          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Tp.newlabel());
         in
           R.procEntryExit (exp, mainlevel);
-          R.getResult()          
+          R.getResult()
         end
 end
