@@ -38,8 +38,8 @@ struct
   val wordSize = 4;
 
   (* given Frame.access and Tree.TEMP(Frame.FP), return a Tree.exp *)
-  fun exp (InFrame(k)) (Tree.TEMP(fp:Temp.temp)) = 
-    Tree.MEM(Tree.BINOP(Tree.PLUS, Temp.TEMP(fp), Tree.CONST(k)))
+  fun exp (InFrame(k)) fp = 
+    Tree.MEM(Tree.BINOP(Tree.PLUS, fp, Tree.CONST(k)))
     | exp (InReg(t: Temp.temp)) _ = Tree.TEMP(t)
   
   datatype frag = PROC of {body: Tree.stm, frame: frame}
