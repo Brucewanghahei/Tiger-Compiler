@@ -295,10 +295,17 @@ struct
         val result = case entry of SOME {result, ...} => result
                                  | NONE => Ty.NIL
       in
-          (case entry of
-               SOME {formals, ...} => checkFuncParams(S.name func, formals, map #ty (map trexp args), pos)
-             | NONE => ());
-          {exp=(), ty=result}
+          case entry of
+               SOME {funLevel, label, formals, result} =>
+               (checkFuncParams(S.name func, formals, map #ty (map trexp args), pos);
+                {
+                  exp = R.call(level, funLevel, label, map (fn arg => #exp (trexp arg)) args),
+                  ty = result
+               })
+             | NONE => {
+                 exp = R.dummy_exp,
+                 ty = result
+             }
       end
       )
     | trexp (A.ArrayExp {typ, size, init, pos}) =
