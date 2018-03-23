@@ -3,3 +3,4 @@
 *.zip
 LexAnalysis/tiger.lex.sml 
 tiger.grm.*
+test-results/
