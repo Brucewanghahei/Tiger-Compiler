@@ -193,7 +193,7 @@ struct
       in
         Ex (Tr.ESEQ(seq[(cond) (thenLabel, endLabel),
                     Tr.LABEL(thenLabel),
-                    Tr.MOVE (Tr.TEMP(r), thenExp),
+                    Tr.MOVE (Tr.TEMP(r), unEx(thenExp)),
                     Tr.LABEL(endLabel)],
             Tr.TEMP(r)))
       end

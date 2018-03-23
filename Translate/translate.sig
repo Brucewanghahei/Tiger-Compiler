@@ -40,7 +40,7 @@ sig
     val breakExp: Tree.label -> exp
     val ifExp: (exp * exp) -> exp
     val ifelseExp: (exp * exp * exp) -> exp
-    val forExp: (access * exp * exp * exp) -> exp
+    val forExp: (MipsFrame.access * exp * exp * exp) -> exp
 
     (* callLevel * decLevel * args -> result exp*)
     val call: (level * level * Temp.label * exp list) -> exp
