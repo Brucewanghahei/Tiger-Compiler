@@ -18,6 +18,9 @@ sig
     val formals : level -> access list
     val allocLocal : level -> bool -> access
 
+    (* function declaration *)
+    val procEntryExit: exp * level -> unit
+
     (* construct Tree *)
     val nilkw: exp
     val intlit: int -> exp
@@ -30,9 +33,6 @@ sig
     val letexp: exp list * exp -> exp
     val arithOp : Absyn.oper * exp * exp -> exp
     val compOp : Absyn.oper * exp * exp -> exp
-
-    (* function declaration *)
-    val procEntryExit1: exp * level -> unit
 
     (* utility functions *)
     val nilExp: unit -> exp

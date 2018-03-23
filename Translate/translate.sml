@@ -59,6 +59,12 @@ struct
   fun allocLocal (level(level_opt, frame, uniq)) escape =
     access(level(level_opt, frame, uniq), Frame.allocLocal(frame, escape))  
 
+  fun procEntryExit (body, level(l, frame, uniq)) =
+      let body' = Frame.procEntryExit1(frame, Tr.MOVE(Tr.TEMP Frame.RV, unEx(body)))
+      in
+          fragments := Frame.PROC{body = body', frame = frame} :: !fragments
+      end
+
   fun trace_levels (inside_level, outside_level, fp) access =
   let
     fun trace (curr_level(SOME(parent_level), _, curr_uniq_ref), target_level(_, _,

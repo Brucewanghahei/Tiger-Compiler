@@ -9,6 +9,7 @@ sig
   val allocLocal : frame -> bool -> access
   
   val FP : Temp.temp
+  val RV: Temp.temp
   val wordSize: int
   val exp : access -> Tree.exp -> Tree.exp
   

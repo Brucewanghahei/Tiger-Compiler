@@ -33,6 +33,7 @@ struct
   fun allocLocal (frame{name, formals, k}) escape = newAccess(k, escape) 
 
   val FP = Temp.newtemp()
+  val RV = Temp.newtemp()
 
   val wordSize = 4;
 
