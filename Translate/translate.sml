@@ -79,16 +79,19 @@ struct
   fun get_static_link (call_level, def_level, fp) =
   let
     fun trace (cur_level, tgt_level) exp=
-    let
-      val level(SOME(prt_level), _, cur_unqref) = cur_level
-      val level(_, _, tgt_unqref) = tgt_level
-    in
-      if cur_unqref = tgt_unqref then
-        exp
-      else
-        (* static link offset is 0 *)
-        trace (prt_level, tgt_level) (Tr.MEM exp)
-    end
+        case cur_level of
+            level(NONE, _, _) => exp
+          | _ => 
+            let
+                val level(SOME(prt_level), _, cur_unqref) = cur_level
+                val level(_, _, tgt_unqref) = tgt_level
+            in
+                if cur_unqref = tgt_unqref then
+                    exp
+                else
+                    (* static link offset is 0 *)
+                    trace (prt_level, tgt_level) (Tr.MEM exp)
+            end
   in
     trace (call_level, def_level) (Tr.TEMP fp)
   end
