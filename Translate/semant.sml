@@ -523,8 +523,7 @@ struct
                   fun trParams (params: A.field list) pos=
                       {
                         nameTys = map (fn ({typ, name, ...}) => (name, lookType(tenv, typ, pos))) params,
-                        escapes = map (fn ({escape, ...}) => !escape)  params,
-                        accesses = R.formals level
+                        escapes = map (fn ({escape, ...}) => !escape)  params
                       }
                   (* first pass to scan headers*)
 
@@ -571,10 +570,16 @@ struct
                   fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
                       let
                           val resultTy = trResult result
-                          val {nameTys, accesses, ...} = trParams params pos
-                          fun enterParam (((name, ty), access), venv:venv) =
-                              S.enter(venv, name, E.VarEntry{access = access, ty = ty, assignable = true})
-                          val venv' = foldl enterParam venv (ListPair.zip (nameTys, accesses))
+                          val {nameTys, escapes, ...} = trParams params pos
+                          fun enterParam (((name, ty), escape), venv:venv) =
+                            let
+                              val access = R.allocLocal level escape
+                            in
+                              S.enter(venv, name, E.VarEntry{access = access, ty
+                              = ty, assignable = true})
+                            end
+                          val venv' = foldl enterParam venv (ListPair.zip
+                          (nameTys, escapes))
                           val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, level, Temp.newlabel())
                       in
                           assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
