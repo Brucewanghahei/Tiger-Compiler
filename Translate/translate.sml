@@ -167,7 +167,7 @@ struct
         case (cond, thenExp) of
           (_, Cx _) =>
             Cx (fun (t, f) =>
-              seq[(cond) (thenLabel, endLabel),
+                  seq[(cond) (thenLabel, endLabel),
                   Tr.LABEL(thenLabel),
                   (unCx thenExp) (t, f),
                   Tr.LABEL(endLabel)])
@@ -177,13 +177,11 @@ struct
                 unNx thenExp,
                 Tr.LABEL(endLabel)])
           | (_, Ex _) =>
-            Ex (Tr.ESEQ
-                (seq[(cond) (thenLabel, endLabel),
-                  Tr.LABEL(thenLabel),
-                  Tr.MOVE (Tr.TEMP(r), thenExp),
-                  Tr.LABEL(endLabel)],
+            Ex (Tr.ESEQ(seq[(cond) (thenLabel, endLabel),
+                        Tr.LABEL(thenLabel),
+                        Tr.MOVE (Tr.TEMP(r), thenExp),
+                        Tr.LABEL(endLabel)],
                 Tr.TEMP(r)))
-          | => Error.impossible "Invalid thenExp type"
       end
 
   fun ifelseExp (cond, thenExp, elseExp) =
@@ -192,35 +190,16 @@ struct
         val r = Tp.newtemp()
         val thenLabel = Tp.newLabel()
         val elseLabel = Tp.newLabel()
-        val endLabel = Tp.newLabel()
+        val joinLabel = Tp.newLabel()
       in
-        case (cond, thenExp, elseExp) of
-          (_, Cx _, Cx_) =>
-            Cx (fun (t, f) =>
-              seq[(cond) (thenLabel, elseLabel),
-                  Tr.LABEL(thenLabel),
-                  (unCx thenExp) (t, f),
-                  Tr.LABEL(elseLabel),
-                  (unCx elseExp) (t, f)])
-          | (_, Nx _, Nx _) =>
-            Nx (seq[(cond) (thenLabel, elseLabel),
-                Tr.LABEL(thenLabel),
-                unNx thenExp,
-                Tr.JUMP(Tr.NAME(endLabel), [endLabel]),
-                Tr.LABEL(elseLabel),
-                unNx elseExp,
-                Tr.LABEL(endLabel)])
-          | (_, Ex _, Ex _) =>
-            Ex (Tr.ESEQ
-                (seq[(cond) (thenLabel, elseLabel),
-                  Tr.LABEL thenLabel,
-                  Tr.MOVE(Tr.TEMP(r), unExp thenExp),
-                  Tr.JUMP(Tr.NAME(endLabel), [endLabel]),
-                  Tr.LABEL(elseLabel),
-                  Tr.MOVE(Tr.TEMP(r), unEx elseExp),
-                  Tr.LABEL(endLabel)],
-                Tr.TEMP r))
-          | _ => Error.impossible "Type mismatch between thenExp and elseExp"
+        Ex (Tr.ESEQ(seq[(cond) (thenLabel, elseLabel),
+                    Tr.LABEL(thenLabel),
+                    Tr.MOVE(Tr.TEMP(r), unEx(thenExp)),
+                    Tr.JUMP(Tr.NAME(endLabel), [endLabel]),
+                    Tr.LABEL(elseLabel),
+                    Tr.MOVE(Tr.TEMP(r), unEx(elseExp)),
+                    Tr.LABEL(endLabel)],
+            Tr.TEMP r))
       end
 
   fun forExp
