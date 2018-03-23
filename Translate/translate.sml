@@ -5,6 +5,8 @@ struct
   structure Tp = Temp
   structure A = Absyn
 
+  type frag = Frame.frag
+
   datatype exp = Ex of Tr.exp
                | Nx of Tr.stm
                | Cx of Tp.label * Tp.label -> Tr.stm
@@ -50,7 +52,7 @@ struct
 
   val outermost = level(NONE, Frame.newFrame {name=Tp.newlabel(), escapes=[]} ,ref ())
 
-  val fragments: Frame.frag list ref = ref []
+  val fragments: frag list ref = ref []
   
   fun getResult () =
     ! fragments
@@ -168,18 +170,17 @@ struct
     comp oper
   end
 
-  fun whileExp (test, body) =
+  fun whileExp (test, body, joinLabel) =
       let
         val testLabel = Tp.newlabel()
         val bodyLabel = Tp.newlabel()
-        val doneLabel = Tp.newlabel()
       in
         Nx (seq[Tr.LABEL(testLabel),
-                unCx(test) (bodyLabel, doneLabel),
+                unCx(test) (bodyLabel, joinLabel),
                 Tr.LABEL(bodyLabel),
                 unNx(body),
                 Tr.JUMP(Tr.NAME(testLabel), [testLabel]),
-                Tr.LABEL(doneLabel)])
+                Tr.LABEL(joinLabel)])
       end
 
   fun breakExp bL = Nx(Tr.JUMP(Tr.NAME(bL), [bL]))
@@ -187,15 +188,13 @@ struct
   fun ifExp (cond, thenExp) =
       let
         val cond = unCx(cond)
-        val r = Tp.newtemp()
         val thenLabel = Tp.newlabel()
-        val endLabel = Tp.newlabel()
+        val joinLabel = Tp.newlabel()
       in
-        Ex (Tr.ESEQ(seq[(cond) (thenLabel, endLabel),
+        Nx (seq[cond (thenLabel, joinLabel),
                     Tr.LABEL(thenLabel),
-                    Tr.MOVE (Tr.TEMP(r), unEx(thenExp)),
-                    Tr.LABEL(endLabel)],
-            Tr.TEMP(r)))
+                    unNx(thenExp),
+                    Tr.LABEL(joinLabel)])
       end
 
   fun ifelseExp (cond, thenExp, elseExp) =
@@ -216,11 +215,10 @@ struct
             Tr.TEMP(r)))
       end
 
-  fun forExp (var_access, lo, hi, body) =
+  fun forExp (access(val_level, var_access), lo, hi, body, joinLabel) =
       let
         val bodyLabel = Tp.newlabel()
         val forLabel = Tp.newlabel()
-        val joinLabel = Tp.newlabel()
         val var_ex = Frame.exp var_access (Tree.TEMP Frame.FP)
         val hi_ex = unEx hi
         val lo_ex = unEx lo

@@ -173,17 +173,17 @@ struct
   let
       fun trvar(A.SimpleVar(sym, pos)) = ( 
           case lookupVariable(venv, sym, pos) of
-              SOME {access, ty, assignable} => {exp=R.simpleVar(access, level), ty=ty}
+              SOME (E.VarEntry{access=access, ty=ty, ...}) => {exp=R.simpleVar(access, level), ty=ty}
             | NONE => {exp=R.dummy_exp,
             ty=Ty.INT} ) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
-          val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
+          val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue, level)
         in
           case actual_ty lvalue_ty of
             Ty.RECORD (sym_ty_list, uni) =>
             let
-              val (ty, k) = lookupRecordFieldType(sym_ty_list, sym, pos)
+              val (ty, k) = lookupRecordField(sym_ty_list, sym, pos)
             in
               {exp=R.subVar(base_pointer, R.intlit(k)), ty=ty}
             end
@@ -195,12 +195,12 @@ struct
         end
       | trvar(A.SubscriptVar(lvalue, exp, pos)) =
         let 
-          val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
+          val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue, level)
         in
           case actual_ty lvalue_ty of
             Ty.ARRAY (ty, uni) =>
             let
-              val {exp=k_exp, ty=ty} = transExp(venv, tenv, exp)
+              val {exp=k_exp, ty=ty} = transExp(venv, tenv, exp, level, Temp.newlabel())
               val _ = assertTypeEq(ty, Ty.INT, err pos, "Array index type should integer");
             in
               {exp=R.subVar(base_pointer, k_exp), ty=ty}          
@@ -249,7 +249,7 @@ struct
             {venv=venv, tenv=tenv, exps=(#exps b)@exps}
           end)
           {venv=venv, tenv=tenv, exps=[]} decs
-        {exp=body_exp, ty=body_ty} = transExp(venv', tenv', body)
+        val {exp=body_exp, ty=body_ty} = transExp(venv', tenv', body, level, breakLabel)
       in
         {exp=R.letexp(dec_exps, body_exp), ty=body_ty}
       end
@@ -277,13 +277,14 @@ struct
 
         val _ = loopLevel := (!loopLevel) + 1
         val _ = breakNum := 0
+        val breakLabel = Temp.newlabel()
         val body_exp = transExp(venv', tenv, body, level, breakLabel)
         val _ = loopLevel := (!loopLevel) - 1
       in
-        checkInt(lo_exp, pos, "Low side of the ForExp with variable: " ^ S.name id );
-        checkInt(hi_exp, pos, "High side of the ForExp with variable: " ^ S.name id);
+        checkInt(lo_exp, pos, "Low side of the ForExp with variable: " ^ S.name for_sym);
+        checkInt(hi_exp, pos, "High side of the ForExp with variable: " ^ S.name for_sym);
         checkNoValue(body_exp, pos, " ForExp body should be UNIT"); (* ensure id not re-assigned in the body scope *)
-        {exp=R.forExp(for_access, #exp lo_exp, #exp hi_exp, #exp body_exp), ty=Ty.UNIT}
+        {exp=R.forExp(for_access, #exp lo_exp, #exp hi_exp, #exp body_exp, breakLabel), ty=Ty.UNIT}
       end
     | trexp (A.VarExp var) =
       transVar(venv, tenv, var, level)
@@ -295,11 +296,11 @@ struct
       (
       let
         val entry = lookupFunEntry(venv, func, pos)
-        val result = case entry of SOME {result, ...} => result
+        val result = case entry of SOME (E.FunEntry{result=result, ...}) => result
                                  | NONE => Ty.NIL
       in
           case entry of
-               SOME {funLevel, label, formals, result} =>
+               SOME (E.FunEntry{level=funLevel, label=label, formals=formals, result=result}) =>
                (checkFuncParams(S.name func, formals, map #ty (map trexp args), pos);
                 {
                   exp = R.call(level, funLevel, label, map (fn arg => #exp (trexp arg)) args),
@@ -317,22 +318,22 @@ struct
         val {exp=size_exp, ty=sizeTy} = trexp size
       in
         (
-        assertTypeEq(sizeTym, Ty.INT, err pos, "Array size must be INT");
-	    (case (lookActualType(tenv, typ, pos)) of
-	      Ty.ARRAY(actTy, unique) =>
-	      (assertTypeEq(actTy, initTy, err pos,
+        assertTypeEq(sizeTy, Ty.INT, err pos, "Array size must be INT");
+        (case (lookActualType(tenv, typ, pos)) of
+          Ty.ARRAY(actTy, unique) =>
+          (assertTypeEq(actTy, initTy, err pos,
           "Type mismatch between initial type and array type.\n"
           ^ "Array type: " ^ (Ty.name (lookType(tenv, typ, pos)))
           ^ "\nInit type: " ^ (Ty.name initTy) );
-		  {exp=R.createArray(init_exp, size_exp), ty=lookType(tenv, typ, pos)})
-	    | _ => (err pos ("Invalid ARRAY type");
-	        {exp=R.dummy_exp, ty=Ty.UNIT})
+          {exp=R.createArray(init_exp, size_exp), ty=lookType(tenv, typ, pos)})
+        | _ => (err pos ("Invalid ARRAY type");
+            {exp=R.dummy_exp, ty=Ty.UNIT})
         )
         )
       end
     | trexp (A.AssignExp {var, exp, pos}) =
       let
-        val {exp=vExp, ty=varTy} = transVar (venv, tenv, var)
+        val {exp=vExp, ty=varTy} = transVar (venv, tenv, var, level)
         val {exp=eExp, ty=expTy} = trexp exp
       in
         (
@@ -344,15 +345,16 @@ struct
     | trexp (A.WhileExp {test, body, pos}) =
       let
         val _ = loopLevel := !loopLevel + 1
-	val {exp=testExp, ty=_} = transExp (venv, tenv, test, level, breakLabel)
-	val {exp=bodyExp, ty=_} = transExp (venv, tenv, body, level, breakLable)
+        val breakLabel = Tp.newlabel() 
+        val {exp=testExp, ty=_} = transExp (venv, tenv, test, level, breakLabel)
+        val {exp=bodyExp, ty=_} = transExp (venv, tenv, body, level, breakLabel)
         val _ = loopLevel := !loopLevel - 1
         val _ = breakNum := 0
       in
         (
         checkInt(trexp test, pos, "Invalid WHILE loop test type, INT expected");
         checkNoValue(trexp body, pos, "Invalid WHILE loop body type, UNIT expected");
-        {exp=(R.whileExp(testExp, bodyExp)), ty=Ty.UNIT}
+        {exp=(R.whileExp(testExp, bodyExp, breakLabel)), ty=Ty.UNIT}
         )
       end
     | trexp (A.BreakExp pos) =
@@ -366,31 +368,41 @@ struct
         )
       end
     | trexp (A.IfExp {test=test, then'=then', else'=else_opt, pos=pos}) =
+      let
+        val test_exp = trexp test
+        val then_exp = trexp then'
+        val _ = checkInt(test_exp, pos, "Invalid TEST expression type, INT expected")
+      in
       (case else_opt of
-          NONE =>
-              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-              checkNoValue(trexp then', pos, "Invalid THEN expression type, UNIT expected");
-              {exp=(#exp (trexp test), #exp (trexp then')), ty=Ty.UNIT})
-          | SOME(else') =>
-              (checkInt(trexp test, pos, "Invalid TEST expression type, INT expected");
-              assertTypeEq(#ty (trexp then'), #ty (trexp else'), err pos, "IfExp THEN-ELSE type mismatch");
-              {exp=(#exp (trexp test), #exp (trexp then'), #exp (trexp else')), ty=thenTy}))
+        NONE =>(
+          checkNoValue(then_exp, pos, "Invalid THEN expression type, UNIT expected");
+          {exp=R.ifExp(#exp test_exp, #exp then_exp), ty=Ty.UNIT})
+      | SOME(else') =>
+        let
+          val else_exp = trexp else'
+        in
+          assertTypeEq(#ty then_exp, #ty else_exp, err pos, "IfExp THEN-ELSE type mismatch");
+          {exp=R.ifelseExp(#exp test_exp, #exp then_exp, #exp else_exp), ty=(#ty then_exp)}
+        end
+      )
+      end
     | trexp (A.RecordExp {fields = fields, typ = typ, pos = pos}) =
       let
+        type field = {sym:A.symbol, expty:expty, pos:A.pos}
         val recordTy = lookActualType(tenv, typ, pos)
-        val ini_fields = map (fn (symbol,exp,pos) => (symbol, trexp exp, pos)) fields 
-        val ini_exps = map #exp (#2 ini_fields) 
+        val ini_fields = map (fn (sym, exp, pos) =>
+                              {sym=sym, expty=(trexp exp), pos=pos}) fields 
+        val ini_exps = map #exp (map #expty ini_fields) 
       in
       (case recordTy of
           Types.RECORD(def_fields, unique) =>
           let
-            fun check (ini_field::ini_tail, def_field::def_tail) =
+            fun check (ini_field :: ini_tail, def_field::def_tail) =
             let
-              val ini_id = #1 ini_field and def_id = #1 def_field
-              val ini_ty = #ty (#2 ini_field) and def_ty = #2 def_field
-              val pos = #3 ini_fields
+              val {sym=ini_id, expty={exp=_, ty=ini_ty}, pos=pos} = ini_field 
+              val (def_id, def_ty) = def_field
             in
-              if compareAnyType(ini_ty, ini_id) andalso ini_id = def_id then
+              if compareAnyType(ini_ty, def_ty) andalso ini_id = def_id then
                 check (ini_tail, def_tail)
               else
                 (err pos ("Inconsistent fields type: " ^ S.name typ);
@@ -403,7 +415,7 @@ struct
               | check ([], []) = true
           in
             if check(ini_fields, def_fields) then
-              {exp=R.createRecord(ini_exps), ty=lookType(typ)}
+              {exp=R.createRecord(ini_exps), ty=lookType(tenv, typ, pos)}
             else
               {exp=R.dummy_exp, ty=Ty.UNIT}
           end
@@ -414,12 +426,12 @@ struct
       trexp exp
     end
 
-    and transDec (venv, tenv, dec, level, breakLabel) =
+    and transDec (venv:venv, tenv:tenv, dec, level, breakLabel) =
       let fun trdec (A.VarDec{name, escape, typ, init, pos, ...}) =
-              let val {exp, ty} = transExp(venv, tenv, init)
+              let val {exp, ty} = transExp(venv, tenv, init, level, breakLabel)
                   val msgTmpl = "VarDec: "
                   (* translate *)
-                  val access = R.allocLocal level !escape
+                  val access = R.allocLocal level (!escape)
                   val varexp = R.simpleVar(access, level)
               in
                   case typ of
@@ -434,7 +446,7 @@ struct
                     | NONE => assertEq(actual_ty ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly")
                 ;
                         {
-                          venv = S.enter(venv, name, E.VarEntry{ty = ty, assignable = true}),
+                          venv = S.enter(venv, name, E.VarEntry{access = access, ty = ty, assignable = true}),
                           tenv = tenv,
                           exps = [R.assign(varexp, exp)]
                         }
@@ -508,11 +520,10 @@ struct
             | trdec (A.FunctionDec fundecs) =
               let
                   val msgTmpl = "FunDec: "
-                  fun trParams (params, level) =
+                  fun trParams (params: A.field list) pos=
                       {
-                        nameTys = (map #name params,
-                                   map (fn {typ, ...} => lookType(tenv, typ, pos)) params),
-                        escapes = map (fn {escape, ...} => !escape)  params,
+                        nameTys = map (fn ({typ, name, ...}) => (name, lookType(tenv, typ, pos))) params,
+                        escapes = map (fn ({escape, ...}) => !escape)  params,
                         accesses = R.formals level
                       }
                   (* first pass to scan headers*)
@@ -530,10 +541,10 @@ struct
                                   (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
                                       let
                                           val resultTy = trResult result
-                                          val {nameTys, escapes, ...} = trParams params
-                                          val newLabel = Tp.newLable
+                                          val {nameTys, escapes, ...} = trParams params pos
+                                          val newLabel = Tp.newlabel()
                                           val entry = E.FunEntry{
-                                                  level = R.newLevel{parent = level, name = newLable, escapes = escapes},
+                                                  level = R.newLevel{parent = level, name = newLabel, escapes = escapes},
                                                   label = newLabel,
                                                   formals = nameTys,
                                                   result = resultTy
@@ -542,7 +553,7 @@ struct
                                           (
                                             S.enter(acc, name, entry),
                                             case S.look(accTemp, name) of
-                                                SOME _ => (err ~1
+                                                SOME _ => (err pos
                                                                (msgTmpl ^ "same mutually recursive function declaration");
                                                            accTemp)
                                               | NONE => S.enter(accTemp, name, entry)
@@ -560,11 +571,11 @@ struct
                   fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
                       let
                           val resultTy = trResult result
-                          val {nameTys, accesses, ...} = trParams params
+                          val {nameTys, accesses, ...} = trParams params pos
                           fun enterParam (((name, ty), access), venv:venv) =
                               S.enter(venv, name, E.VarEntry{access = access, ty = ty, assignable = true})
-                          val venv' = foldl enterParam venv ListPair.zip(nameTys, accesses)
-                          val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body)
+                          val venv' = foldl enterParam venv (ListPair.zip (nameTys, accesses))
+                          val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, level, Temp.newlabel())
                       in
                           assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
                           (S.name name) ^ " type mismatch.\nReturn type: " ^
@@ -572,13 +583,14 @@ struct
                           bodyTy))
                         ;
                           (case lookupFunEntry(venv, name, pos) of
-                                SOME{level, ...} => R.procEntryExit1(bodyExp, level))
+                                (SOME (E.FunEntry ({level, ...}))) => R.procEntryExit(bodyExp, level))
                       end
               in
                   map (fn dec => trFunDecBody(venv', dec)) fundecs;
                   {
                     venv = venv',
-                    tenv = tenv
+                    tenv = tenv ,
+                    exps = []
                   }
               end
       in
@@ -599,7 +611,7 @@ struct
     and transProg (exp) =
         let val mainlevel =
           R.newLevel {parent = R.outermost, name = Temp.namedlabel "tiger_main", escapes = []}
-          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newLabel());
+          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newlabel());
         in
           R.procEntryExit (exp, mainlevel);
           R.getResult()          

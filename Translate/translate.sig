@@ -5,8 +5,9 @@ sig
     type access (* not the same as Frame.access *)
 
     structure Frame : FRAME
+    type frag = Frame.frag
     val getResult : unit -> Frame.frag list
-    val fragments : Frame.frag list ref
+    val fragments : frag list ref
 
     val unEx : exp -> Tree.exp
     val unNx : exp -> Tree.stm
@@ -36,11 +37,11 @@ sig
     val compOp : Absyn.oper * exp * exp -> exp
 
     (* utility functions *)
-    val whileExp: (exp * exp) -> exp
+    val whileExp: exp * exp * Temp.label -> exp
     val breakExp: Tree.label -> exp
-    val ifExp: (exp * exp) -> exp
-    val ifelseExp: (exp * exp * exp) -> exp
-    val forExp: (MipsFrame.access * exp * exp * exp) -> exp
+    val ifExp: exp * exp -> exp
+    val ifelseExp: exp * exp * exp -> exp
+    val forExp: access * exp * exp * exp * Temp.label -> exp
 
     (* callLevel * decLevel * args -> result exp*)
     val call: (level * level * Temp.label * exp list) -> exp
