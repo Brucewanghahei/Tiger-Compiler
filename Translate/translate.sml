@@ -220,4 +220,10 @@ struct
                 Tr.LABEL(escape)])
       end
 
+  fun call (callLevel, decLevel, label, args) =
+      let
+          val sl = trace_levels(callLevel, decLevel, Frame.FP)
+      in
+          Tr.CALL(T.NAME label, sl::(map unEx args))
+      end
 end
