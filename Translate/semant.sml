@@ -257,7 +257,7 @@ struct
       let
           fun f seq =
           case seq of
-               [] => {exp=(), ty=Ty.UNIT}
+               [] => {exp=R.dummy_exp, ty=Ty.UNIT}
              | [(exp, pos)] => trexp(exp)
              | (exp, pos)::tail =>
                  (
@@ -276,13 +276,13 @@ struct
         (*body check required*)
         val _ = loopLevel := (!loopLevel) - 1
         val _ = breakNum := 0
-        val body_exp = transExp(venv', tenv, body)
+        val body_exp = transExp(venv', tenv, body, level, breakLabel)
         val _ = checkNoValue(body_exp, pos, " ForExp body should be UNIT") (* ensure id not re-assigned in the body scope *)
       in
         body_exp
       end
     | trexp (A.VarExp var) =
-      transVar(venv, tenv, var)
+      transVar(venv, tenv, var, level)
     | trexp (A.NilExp) =
       {exp=R.nilkw, ty=Ty.NIL}
     | trexp (A.StringExp (str, pos)) =
