@@ -22,4 +22,5 @@ semant.sml
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
 $/basis.cm
+printtree.sml
 main.sml
