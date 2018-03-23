@@ -299,7 +299,7 @@ struct
                SOME {funLevel, label, formals, result} =>
                (checkFuncParams(S.name func, formals, map #ty (map trexp args), pos);
                 {
-                  exp = R.call(level, funLevel, label, map (fn arg => #exp (trexp arg)) args, result = Ty.UNIT),
+                  exp = R.call(level, funLevel, label, map (fn arg => #exp (trexp arg)) args),
                   ty = result
                })
              | NONE => {
