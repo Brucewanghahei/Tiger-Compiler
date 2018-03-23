@@ -57,15 +57,8 @@ struct
        | (Ty.RECORD(_, lhs_uni), Ty.NIL) => true
        | (Ty.RECORD(_, lhs_uni), Ty.RECORD(_, rhs_uni)) => lhs_uni = rhs_uni
        | (Ty.ARRAY(_, lhs_uni), Ty.ARRAY(_, rhs_uni)) => lhs_uni = rhs_uni
-       | (Ty.NAME a, Ty.NAME b) =>
-           let
-             val lhs_ty_opt = Ty.whatis(lhs)
-             val rhs_ty_opt = Ty.whatis(rhs)
-           in
-             case (lhs_ty_opt, rhs_ty_opt) of
-                  (SOME(lhs_ty), SOME(rhs_ty)) => compareAnyType(lhs_ty, rhs_ty)
-                | (_, _) => false
-           end
+       | (Ty.NAME a, r) => compareAnyType(actual_ty(lhs), r)
+       | (l, Ty.NAME b) => compareAnyType(l, actual_ty(rhs))
        | (_, _) => false 
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
@@ -405,7 +398,12 @@ struct
               if compareAnyType(ini_ty, def_ty) andalso ini_id = def_id then
                 check (ini_tail, def_tail)
               else
-                (err pos ("Inconsistent fields type: " ^ S.name typ);
+                (err pos ("Inconsistent record type: " ^ (S.name typ) ^ 
+                "\nDefined field: "
+                ^ (S.name def_id) ^ ":" ^ (Ty.name def_ty) ^ "\nGiven field:  " ^
+                (S.name ini_id) ^ ":" ^ (Ty.name ini_ty));
+                err pos (Bool.toString(compareAnyType(ini_ty, def_ty)));
+                err pos (Bool.toString(ini_id = def_id));
                 false)
             end
               | check ([], [_]) = (err pos ("Need more fileds for the record: "
