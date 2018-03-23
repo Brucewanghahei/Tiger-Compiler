@@ -279,7 +279,8 @@ struct
         val body_exp = transExp(venv', tenv, body, level, breakLabel)
         val _ = checkNoValue(body_exp, pos, " ForExp body should be UNIT") (* ensure id not re-assigned in the body scope *)
       in
-        body_exp
+        val access = R.allocLocal level !escape
+        {exp=(R.forExp(R.simpleVar(access, level), Tp.newlabel(), #exp (trexp lo), #exp (trexp hi), #exp body_exp)), ty=Ty.UNIT}
       end
     | trexp (A.VarExp var) =
       transVar(venv, tenv, var, level)
