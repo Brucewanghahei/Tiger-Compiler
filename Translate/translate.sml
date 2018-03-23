@@ -164,24 +164,11 @@ struct
         val thenLabel = Tp.newLabel()
         val endLabel = Tp.newLabel()
       in
-        case (cond, thenExp) of
-          (_, Cx _) =>
-            Cx (fun (t, f) =>
-                  seq[(cond) (thenLabel, endLabel),
-                  Tr.LABEL(thenLabel),
-                  (unCx thenExp) (t, f),
-                  Tr.LABEL(endLabel)])
-          | (_, Nx _) =>
-            Nx (seq[(cond) (thenLabel, endLabel),
-                Tr.LABEL(thenLabel),
-                unNx thenExp,
-                Tr.LABEL(endLabel)])
-          | (_, Ex _) =>
-            Ex (Tr.ESEQ(seq[(cond) (thenLabel, endLabel),
-                        Tr.LABEL(thenLabel),
-                        Tr.MOVE (Tr.TEMP(r), thenExp),
-                        Tr.LABEL(endLabel)],
-                Tr.TEMP(r)))
+        Ex (Tr.ESEQ(seq[(cond) (thenLabel, endLabel),
+                    Tr.LABEL(thenLabel),
+                    Tr.MOVE (Tr.TEMP(r), thenExp),
+                    Tr.LABEL(endLabel)],
+            Tr.TEMP(r)))
       end
 
   fun ifelseExp (cond, thenExp, elseExp) =
@@ -199,9 +186,23 @@ struct
                     Tr.LABEL(elseLabel),
                     Tr.MOVE(Tr.TEMP(r), unEx(elseExp)),
                     Tr.LABEL(endLabel)],
-            Tr.TEMP r))
+            Tr.TEMP(r)))
       end
 
-  fun forExp
+  fun forExp (var, escape, lo, hi, body) =
+      let
+        val bodyLabel = Tp.newLabel()
+        val forLabel = Tp.newLabel()
+      in
+        Nx (seq[Tr.MOVE(unEx(var), unEx(lo)),
+                Tr.CJUMP(Tr.LE, unEx(var), unEx(hi), bodyLabel, escape)
+                Tr.LABEL(bodyLabel),
+                unEx(body),
+                Tr.CJUMP(Tr.LT, unEx(var), unEx(hi), forLabel, escape),
+                Tr.LABEL(forLabel),
+                Tr.MOVE(unEx(var), Tr.BINOP(Tr.PLUS, unEx(var), Tr.CONST 1)),
+                Tr.JUMP(Tr.NAME(forLabel), [forLabel]),
+                Tr.LABEL(escape)])
+      end
 
 end
