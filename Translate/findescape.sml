@@ -51,4 +51,22 @@ and traverseExp(env: secEnv, d: depth, s: A.exp): unit =
        end
      | A.ArrayExp{size, init, ...} => (trvsExp(size); trvsExp(init))
     end
-and traverseDec(env: escEnv, d: depth, s: A.dec)
+and traverseDecs(env: escEnv, d: depth, s: A.dec list): escEnv =
+    let fun trvsDec(dec, env) =
+            case dec of
+                A.FunctionDec(decs) =>
+                (map (fn {params, body, ...} =>
+                         let env' = foldl (fn ({name, escape, ...}, env) => S.enter(env, name, (d+1, escape))) env params
+                         in
+                             traverseExp(env', d+1, body)
+                         end)
+                     decs;
+                 env)
+              | A.VarDec{name, escape, init, ...} => (escape := false; traverseExp(env, d, init); S.enter(env, name, (d, escape)))
+              | A.TypeDec => env
+    in
+        foldl trvsDec env s
+    end
+
+fun findEscape(prog) =
+    traverseExp(S.empty, 0, prog)
