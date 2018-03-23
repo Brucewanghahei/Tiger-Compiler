@@ -13,9 +13,9 @@ struct
   
   val nilkw = (Ex (Tr.CONST 0))
 
-  fun seq (tree_stm::tree_stm_tail) =
+  fun seq [tree_stm] = tree_stm
+    | seq (tree_stm::tree_stm_tail) =
     Tr.SEQ(tree_stm, seq tree_stm_tail)
-    | seq [tree_stm] = tree_stm
   
   fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f =
     seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
