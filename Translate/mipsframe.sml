@@ -48,6 +48,10 @@ struct
   fun externalCall (name, args) =
       Tree.CALL(Tree.NAME(Temp.namedlabel name), args)
 
-  fun procEntryExit1 (frame_: frame, body: Tree.stm) = body
+  fun procEntryExit1 (funFrame: frame, body: Tree.stm) =
+      let val frame{name, ...} = funFrame
+      in
+          Tree.SEQ (Tree.LABEL name, body)
+      end
 
 end
