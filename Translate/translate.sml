@@ -152,7 +152,16 @@ struct
 
   fun whileExp (test, body) =
       let
+        val testLabel = Tp.newLabel()
+        val bodyLabel = Tp.newLabel()
+        val doneLabel = Tp.newLabel()
       in
+        Nx (seq[Tr.LABEL(testLabel),
+                unCx(test) (bodyLabel, doneLabel),
+                Tr.LABEL(bodyLabel),
+                unNx(body),
+                Tr.JUMP(Tr.NAME(testLabel), [testLabel]),
+                Tr.LABEL(doneLabel)])
       end
 
   fun breakExp bL = Nx(Tr.JUMP(Tr.NAME(bL), [bL]))
