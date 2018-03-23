@@ -48,6 +48,8 @@ struct
 
   datatype access = access of level * Frame.access
 
+  type frag = Frame.frag
+
   val outermost = level(NONE, Frame.newFrame {name=Tp.newlabel(), escapes=[]} ,ref ())
 
   val fragments: Frame.frag list ref = ref []
