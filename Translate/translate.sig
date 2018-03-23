@@ -35,12 +35,11 @@ sig
     val compOp : Absyn.oper * exp * exp -> exp
 
     (* utility functions *)
-    val nilExp: unit -> exp
     val whileExp: (exp * exp) -> exp
     val breakExp: Tree.label -> exp
     val ifExp: (exp * exp) -> exp
     val ifelseExp: (exp * exp * exp) -> exp
-    val forExp: (exp * Tree.label * exp * exp * exp) -> exp
+    val forExp: (access * exp * exp * exp) -> exp
 
     (* callLevel * decLevel * args -> result exp*)
     val call: (level * level * Temp.label * exp list) -> exp

@@ -267,20 +267,23 @@ struct
       in
         f seq
       end
-    | trexp (A.ForExp {var=id, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
+    | trexp (A.ForExp {var=for_sym, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
       let 
-        val _ = checkInt(trexp lo, pos, "Low side of the ForExp with variable: " ^ S.name id );
-        val _ = checkInt(trexp hi, pos, "High side of the ForExp with variable: " ^ S.name id);
+        val lo_exp = trexp lo
+        val hi_exp = trexp hi
+
+        val for_access = R.allocLocal level (! escape)
+        val venv' = S.enter(venv, for_sym, (E.VarEntry{access=for_access, ty = Ty.INT, assignable = false}))
+
         val _ = loopLevel := (!loopLevel) + 1
-        val venv' = S.enter(venv, id, (E.VarEntry{ty = Ty.INT, assignable = false}))
-        (*body check required*)
-        val _ = loopLevel := (!loopLevel) - 1
         val _ = breakNum := 0
         val body_exp = transExp(venv', tenv, body, level, breakLabel)
-        val _ = checkNoValue(body_exp, pos, " ForExp body should be UNIT") (* ensure id not re-assigned in the body scope *)
+        val _ = loopLevel := (!loopLevel) - 1
       in
-        val access = R.allocLocal level !escape
-        {exp=(R.forExp(R.simpleVar(access, level), Tp.newlabel(), #exp (trexp lo), #exp (trexp hi), #exp body_exp)), ty=Ty.UNIT}
+        checkInt(lo_exp, pos, "Low side of the ForExp with variable: " ^ S.name id );
+        checkInt(hi_exp, pos, "High side of the ForExp with variable: " ^ S.name id);
+        checkNoValue(body_exp, pos, " ForExp body should be UNIT"); (* ensure id not re-assigned in the body scope *)
+        {exp=R.forExp(for_access, #exp lo_exp, #exp hi_exp, #exp body_exp), ty=Ty.UNIT}
       end
     | trexp (A.VarExp var) =
       transVar(venv, tenv, var, level)

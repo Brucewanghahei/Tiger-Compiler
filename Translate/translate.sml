@@ -11,9 +11,13 @@ struct
 
   val dummy_exp = Nx(Tr.EXP(Tr.CONST(0)))
   
-  val nilExp = (Ex Tr.CONST(0))
+  val nilkw = (Ex (Tr.CONST 0))
+
+  fun seq (tree_exp::tree_exp_tail) =
+    Tr.SEQ(tree_exp, seq tree_exp_tail)
+    | seq [tree_exp] = tree_exp
   
-  fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f Tr.stm =
+  fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f =
     seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
         genstm(t,f),
         Tr.LABEL f,
@@ -25,9 +29,9 @@ struct
         let val r = Tp.newtemp()
             val t = Tp.newlabel() and f = Tp.newlabel()
         in
-          Tr.ESEQ(cond_stm(genstm r t f),  Tr.TEMP r)
+          Tr.ESEQ(cond_stm genstm r t f,  Tr.TEMP r)
         end
-    | unEX (Nx s) = Tr.ESEQ(s, Tr.CONST 0)
+    | unEx (Nx s) = Tr.ESEQ(s, Tr.CONST 0)
 
   fun unNx (Ex e) = Tr.EXP e
     | unNx (Nx stm) = stm
@@ -36,7 +40,7 @@ struct
   fun unCx (Ex e) = (fn (t: Tp.label, f: Tp.label) => 
     Tr.CJUMP(Tr.EQ, e, Tr.CONST(1), t, f))
     | unCx (Cx genstm) = genstm
-    | unCx (Nx _) = (Error.impossible "trying unCx to Nx"; fn (t,f) =>
+    | unCx (Nx _) = (ErrorMsg.impossible "trying unCx to Nx"; fn (t,f) =>
         Tr.LABEL(t)) (* return a dummy Tree.stm *)
 
 
@@ -44,12 +48,12 @@ struct
 
   datatype access = access of level * Frame.access
 
-  val outermost = level(NONE, Frame.newFrame(Tp.newLabel(), []) ,ref ())
+  val outermost = level(NONE, Frame.newFrame {name=Tp.newlabel(), escapes=[]} ,ref ())
 
   val fragments: Frame.frag list ref = ref []
 
   fun newLevel {parent, name, escapes} =
-    level(parent, Frame.newFrame(name, escapes), ref ())
+    level(SOME(parent), Frame.newFrame {name=name, escapes=escapes}, ref ())
 
   fun formals (level(level_opt, frame, uniq)) =
     Frame.formals(frame)
@@ -57,30 +61,35 @@ struct
   fun intlit(i) = Ex(Tr.CONST(i))
 
   fun allocLocal (level(level_opt, frame, uniq)) escape =
-    access(level(level_opt, frame, uniq), Frame.allocLocal(frame, escape))  
+    access(level(level_opt, frame, uniq), Frame.allocLocal frame escape)  
 
   fun procEntryExit (body, level(l, frame, uniq)) =
-      let body' = Frame.procEntryExit1(frame, Tr.MOVE(Tr.TEMP Frame.RV, unEx(body)))
+      let val body' = Frame.procEntryExit1(frame, Tr.MOVE(Tr.TEMP Frame.RV, unEx(body)))
       in
           fragments := Frame.PROC{body = body', frame = frame} :: !fragments
       end
 
-  fun trace_levels (inside_level, outside_level, fp) access =
+  fun get_static_link (call_level, def_level, fp) =
   let
-    fun trace (curr_level(SOME(parent_level), _, curr_uniq_ref), target_level(_, _,
-      target_uniq_ref)) exp =
-      if curr_uniq_ref = target_uniq_ref then
-        Ex(Frame.exp access exp)
+    fun trace (cur_level, tgt_level) exp=
+    let
+      val level(SOME(prt_level), _, cur_unqref) = cur_level
+      val level(_, _, tgt_unqref) = tgt_level
+    in
+      if cur_unqref = tgt_unqref then
+        exp
       else
         (* static link offset is 0 *)
-        trace (parent_level, target_level) (Tr.MEM exp)
+        trace (prt_level, tgt_level) (Tr.MEM exp)
+    end
   in
-    trace (inside_level, outside_level, Tr.TEMP(fp))
+    trace (call_level, def_level) (Tr.TEMP fp)
   end
 
-  fun seq tree_exp::tree_exp_tail =
-    Tr.SEQ(tree_exp, seq tree_exp_tail)
-    | seq tree_exp = tree_exp
+  fun trace_levels (call_level, def_level, fp) frame_access =
+    Ex(Frame.exp frame_access
+      (get_static_link(call_level, def_level,Frame.FP))
+    )
   
   fun simpleVar (access(def_lev, fr_acc), call_lev) =
     trace_levels (call_lev, def_lev, Frame.FP) fr_acc
@@ -90,9 +99,6 @@ struct
 
   fun assign (vExp, eExp) = Nx(Tr.MOVE(vExp, eExp))
 
-  fun move base offset rval = Tr.MOVE(Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base),
-    Tr.CONST(offset))), rval)
-
   fun createArray (init_exp, size_exp) = 
       Frame.externalCall("initArray", [size_exp, init_exp])
     
@@ -100,28 +106,31 @@ struct
       let
           val sfrag = List.find (fn e =>
                                       case e of
-                                          Frame.PROC => false
+                                          Frame.PROC _ => false
                                         | Frame.STRING(_, s') => s = s')
-                                  !fragments
+                                  (!fragments)
       in
           case sfrag of
               SOME (Frame.STRING(label, _)) => Ex(Tr.NAME(label))
-            | NONE => let val newLabel = Tp.newLabel()
+            | NONE => let val newlabel = Tp.newlabel()
                       in
-                          fragments := Frame.STRING(newLabel, s)::!fragments;
-                          Ex(Tr.NAME(newLabel))
+                          fragments := Frame.STRING(newlabel, s)::(!fragments);
+                          Ex(Tr.NAME(newlabel))
                       end
       end
+
+  fun move base offset rval = Tr.MOVE(Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base),
+    Tr.CONST(offset))), rval)
 
   fun createRecord field_list =
   let
     val base = Tp.newtemp()
     val head = Tr.MOVE(Tr.TEMP(base), Frame.externalCall("malloc",
-    [Tr.CONST(List.length field_list)]))
-    val nodes = List.rev(foldl (fn (field, (nodes, k)) => 
-      ((move base k field)::nodes, k+1)) ([], 0) filed_list)
+    [Tr.CONST((List.length field_list)*Frame.wordSize)]))
+    val (nodes, k) = foldl (fn (field, (nodes, k)) => 
+      ((move base (k*Frame.wordSize) field)::nodes, k+1)) ([], 0) field_list
   in
-    Ex(Tr.ESEQ(seq (head::nodes), Tr.TEMP(base)))
+    Ex(Tr.ESEQ(seq (head::(List.rev nodes)), Tr.TEMP(base)))
   end
 
   fun letexp (dec_exps, body_exp) = 
@@ -134,7 +143,7 @@ struct
       | ari A.MinusOp = gen Tr.MINUS
       | ari A.TimesOp = gen Tr.MUL
       | ari A.DivideOp = gen Tr.DIV
-      | ari _ = (Error.impossible "arithOp not support";
+      | ari _ = (ErrorMsg.impossible "arithOp not support";
                 dummy_exp)
   in
     ari oper
@@ -150,7 +159,7 @@ struct
       | comp A.LeOp = gen Tr.LE
       | comp A.GtOp = gen Tr.GT
       | comp A.GeOp = gen Tr.GE
-      | comp _ = (Error.impossible "compOp not support";
+      | comp _ = (ErrorMsg.impossible "compOp not support";
                 dummy_exp)
   in
     comp oper
@@ -158,9 +167,9 @@ struct
 
   fun whileExp (test, body) =
       let
-        val testLabel = Tp.newLabel()
-        val bodyLabel = Tp.newLabel()
-        val doneLabel = Tp.newLabel()
+        val testLabel = Tp.newlabel()
+        val bodyLabel = Tp.newlabel()
+        val doneLabel = Tp.newlabel()
       in
         Nx (seq[Tr.LABEL(testLabel),
                 unCx(test) (bodyLabel, doneLabel),
@@ -176,8 +185,8 @@ struct
       let
         val cond = unCx(cond)
         val r = Tp.newtemp()
-        val thenLabel = Tp.newLabel()
-        val endLabel = Tp.newLabel()
+        val thenLabel = Tp.newlabel()
+        val endLabel = Tp.newlabel()
       in
         Ex (Tr.ESEQ(seq[(cond) (thenLabel, endLabel),
                     Tr.LABEL(thenLabel),
@@ -190,40 +199,44 @@ struct
       let
         val cond = unCx(cond)
         val r = Tp.newtemp()
-        val thenLabel = Tp.newLabel()
-        val elseLabel = Tp.newLabel()
-        val joinLabel = Tp.newLabel()
+        val thenLabel = Tp.newlabel()
+        val elseLabel = Tp.newlabel()
+        val joinLabel = Tp.newlabel()
       in
         Ex (Tr.ESEQ(seq[(cond) (thenLabel, elseLabel),
                     Tr.LABEL(thenLabel),
                     Tr.MOVE(Tr.TEMP(r), unEx(thenExp)),
-                    Tr.JUMP(Tr.NAME(endLabel), [endLabel]),
+                    Tr.JUMP(Tr.NAME(joinLabel), [joinLabel]),
                     Tr.LABEL(elseLabel),
                     Tr.MOVE(Tr.TEMP(r), unEx(elseExp)),
-                    Tr.LABEL(endLabel)],
+                    Tr.LABEL(joinLabel)],
             Tr.TEMP(r)))
       end
 
-  fun forExp (var, escape, lo, hi, body) =
+  fun forExp (var_access, lo, hi, body) =
       let
-        val bodyLabel = Tp.newLabel()
-        val forLabel = Tp.newLabel()
+        val bodyLabel = Tp.newlabel()
+        val forLabel = Tp.newlabel()
+        val joinLabel = Tp.newlabel()
+        val var_ex = Frame.exp var_access (Tree.TEMP Frame.FP)
+        val hi_ex = unEx hi
+        val lo_ex = unEx lo
       in
-        Nx (seq[Tr.MOVE(unEx(var), unEx(lo)),
-                Tr.CJUMP(Tr.LE, unEx(var), unEx(hi), bodyLabel, escape)
+        Nx (seq[Tr.MOVE(var_ex, lo_ex),
+                Tr.CJUMP(Tr.LE, var_ex, hi_ex, bodyLabel, joinLabel),
                 Tr.LABEL(bodyLabel),
-                unEx(body),
-                Tr.CJUMP(Tr.LT, unEx(var), unEx(hi), forLabel, escape),
+                unNx(body),
+                Tr.CJUMP(Tr.LT, var_ex, hi_ex, forLabel, joinLabel),
                 Tr.LABEL(forLabel),
-                Tr.MOVE(unEx(var), Tr.BINOP(Tr.PLUS, unEx(var), Tr.CONST 1)),
-                Tr.JUMP(Tr.NAME(forLabel), [forLabel]),
-                Tr.LABEL(escape)])
+                Tr.MOVE(var_ex, Tr.BINOP(Tr.PLUS, var_ex, Tr.CONST 1)),
+                Tr.JUMP(Tr.NAME(bodyLabel), [bodyLabel]),
+                Tr.LABEL(joinLabel)])
       end
 
   fun call (callLevel, decLevel, label, args) =
       let
-          val sl = trace_levels(callLevel, decLevel, Frame.FP)
+          val sl = get_static_link (callLevel, decLevel, Frame.FP)
       in
-          Tr.CALL(T.NAME label, sl::(map unEx args))
+          Tr.CALL(Tr.NAME label, sl::(map unEx args))
       end
 end
