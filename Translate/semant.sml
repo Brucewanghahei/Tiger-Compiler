@@ -173,9 +173,9 @@ struct
   let
       fun trvar(A.SimpleVar(sym, pos)) = ( 
           case lookupVariable(venv, sym, pos) of
-              SOME {access, ty, assignable} => {exp=R.simpleVar(access, level), ty=ty}
-            | NONE => {exp=R.dummy_exp,
-            ty=Ty.INT} ) (* dummy pattern match*)
+              SOME (E.VarEntry{access, ty, assignable}) => {exp=R.simpleVar(access, level), ty=ty}
+            | SOME _ => ((err pos "exptected variable, found function"); {exp=R.dummy_exp, ty=Ty.NIL})
+            | NONE => {exp=R.dummy_exp, ty=Ty.NIL} ) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
           val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue)
@@ -183,7 +183,7 @@ struct
           case actual_ty lvalue_ty of
             Ty.RECORD (sym_ty_list, uni) =>
             let
-              val (ty, k) = lookupRecordFieldType(sym_ty_list, sym, pos)
+              val (ty, k) = lookupRecordField(sym_ty_list, sym, pos)
             in
               {exp=R.subVar(base_pointer, R.intlit(k)), ty=ty}
             end
@@ -240,16 +240,16 @@ struct
       {exp=R.intlit x, ty=Ty.INT}
     | trexp (A.LetExp {decs, body, pos}) =
       let
-        val {venv=venv', tenv=tenv', exps=dec_exps} =
+          val {venv=venv', tenv=tenv', exps=dec_exps} =
           foldl (fn (a,b) => 
-          let
-            val {venv=venv, tenv=tenv, exps=exps} = 
-            transDec(#venv b, #tenv b, a, level, breakLabel)
-          in
-            {venv=venv, tenv=tenv, exps=(#exps b)@exps}
-          end)
-          {venv=venv, tenv=tenv, exps=[]} decs
-        {exp=body_exp, ty=body_ty} = transExp(venv', tenv', body)
+                    let
+                        val {venv=venv, tenv=tenv, exps=exps} = 
+                            transDec(#venv b, #tenv b, a, level, breakLabel)
+                    in
+                        {venv=venv, tenv=tenv, exps=(#exps b)@exps}
+                    end)
+                {venv=venv, tenv=tenv, exps=[]} decs
+          val {exp=body_exp, ty=body_ty} = transExp(venv', tenv', body)
       in
         {exp=R.letexp(dec_exps, body_exp), ty=body_ty}
       end
@@ -317,7 +317,7 @@ struct
         val {exp=size_exp, ty=sizeTy} = trexp size
       in
         (
-        assertTypeEq(sizeTym, Ty.INT, err pos, "Array size must be INT");
+        assertTypeEq(sizeTy, Ty.INT, err pos, "Array size must be INT");
 	    (case (lookActualType(tenv, typ, pos)) of
 	      Ty.ARRAY(actTy, unique) =>
 	      (assertTypeEq(actTy, initTy, err pos,
@@ -345,7 +345,7 @@ struct
       let
         val _ = loopLevel := !loopLevel + 1
 	val {exp=testExp, ty=_} = transExp (venv, tenv, test, level, breakLabel)
-	val {exp=bodyExp, ty=_} = transExp (venv, tenv, body, level, breakLable)
+	val {exp=bodyExp, ty=_} = transExp (venv, tenv, body, level, breakLabel)
         val _ = loopLevel := !loopLevel - 1
         val _ = breakNum := 0
       in
@@ -511,7 +511,7 @@ struct
                   fun trParams (params, level) =
                       {
                         nameTys = (map #name params,
-                                   map (fn {typ, ...} => lookType(tenv, typ, pos)) params),
+                                   map (fn {typ, pos, ...} => lookType(tenv, typ, pos)) params),
                         escapes = map (fn {escape, ...} => !escape)  params,
                         accesses = R.formals level
                       }
@@ -531,9 +531,9 @@ struct
                                       let
                                           val resultTy = trResult result
                                           val {nameTys, escapes, ...} = trParams params
-                                          val newLabel = Tp.newLable
+                                          val newLabel = Tp.newlabel()
                                           val entry = E.FunEntry{
-                                                  level = R.newLevel{parent = level, name = newLable, escapes = escapes},
+                                                  level = R.newLevel{parent = level, name = newLabel, escapes = escapes},
                                                   label = newLabel,
                                                   formals = nameTys,
                                                   result = resultTy
@@ -572,7 +572,7 @@ struct
                           bodyTy))
                         ;
                           (case lookupFunEntry(venv, name, pos) of
-                                SOME{level, ...} => R.procEntryExit1(bodyExp, level))
+                                SOME{level, ...} => R.procEntryExit(bodyExp, level))
                       end
               in
                   map (fn dec => trFunDecBody(venv', dec)) fundecs;
@@ -599,9 +599,9 @@ struct
     and transProg (exp) =
         let val mainlevel =
           R.newLevel {parent = R.outermost, name = Temp.namedlabel "tiger_main", escapes = []}
-          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newLabel());
+          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Tp.newlabel());
         in
           R.procEntryExit (exp, mainlevel);
-          R.getResult()          
+          R.getResult()
         end
 end
