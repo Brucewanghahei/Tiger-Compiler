@@ -6,6 +6,7 @@ sig
 
     structure Frame : FRAME
     val getResult : unit -> Frame.frag list
+    val fragments : Frame.frag list ref
 
     val unEx : exp -> Tree.exp
     val unNx : exp -> Tree.stm
@@ -44,8 +45,6 @@ sig
     (* callLevel * decLevel * args -> result exp*)
     val call: (level * level * Temp.label * exp list) -> exp
     
-    (* call_level * definition_level * current_fp -> access -> IR *) 
-    val trace_levels: (level * level * Temp.temp) -> Frame.access -> Tree.exp
     val dummy_exp : exp
-    val seq: Tree.exp list -> Tree.exp
+    val seq: Tree.stm list -> Tree.stm
 end

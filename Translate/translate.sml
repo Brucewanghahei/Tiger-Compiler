@@ -13,9 +13,9 @@ struct
   
   val nilkw = (Ex (Tr.CONST 0))
 
-  fun seq (tree_exp::tree_exp_tail) =
-    Tr.SEQ(tree_exp, seq tree_exp_tail)
-    | seq [tree_exp] = tree_exp
+  fun seq (tree_stm::tree_stm_tail) =
+    Tr.SEQ(tree_stm, seq tree_stm_tail)
+    | seq [tree_stm] = tree_stm
   
   fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f =
     seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
@@ -51,12 +51,15 @@ struct
   val outermost = level(NONE, Frame.newFrame {name=Tp.newlabel(), escapes=[]} ,ref ())
 
   val fragments: Frame.frag list ref = ref []
+  
+  fun getResult () =
+    ! fragments
 
   fun newLevel {parent, name, escapes} =
     level(SOME(parent), Frame.newFrame {name=name, escapes=escapes}, ref ())
 
   fun formals (level(level_opt, frame, uniq)) =
-    Frame.formals(frame)
+    map (fn formal => access(level(level_opt, frame, uniq), formal)) (Frame.formals frame)
 
   fun intlit(i) = Ex(Tr.CONST(i))
 
@@ -88,7 +91,7 @@ struct
 
   fun trace_levels (call_level, def_level, fp) frame_access =
     Ex(Frame.exp frame_access
-      (get_static_link(call_level, def_level,Frame.FP))
+      (get_static_link(call_level, def_level, fp))
     )
   
   fun simpleVar (access(def_lev, fr_acc), call_lev) =
@@ -97,10 +100,10 @@ struct
   fun subVar (base_fp: exp, offset: exp) =
     Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))
 
-  fun assign (vExp, eExp) = Nx(Tr.MOVE(vExp, eExp))
+  fun assign (vExp, eExp) = Nx(Tr.MOVE(unEx vExp, unEx eExp))
 
   fun createArray (init_exp, size_exp) = 
-      Frame.externalCall("initArray", [size_exp, init_exp])
+      Ex (Frame.externalCall("initArray", [unEx size_exp, unEx init_exp]))
     
   fun strlit s =
       let
@@ -128,7 +131,7 @@ struct
     val head = Tr.MOVE(Tr.TEMP(base), Frame.externalCall("malloc",
     [Tr.CONST((List.length field_list)*Frame.wordSize)]))
     val (nodes, k) = foldl (fn (field, (nodes, k)) => 
-      ((move base (k*Frame.wordSize) field)::nodes, k+1)) ([], 0) field_list
+      ((move base (k*Frame.wordSize) (unEx field))::nodes, k+1)) ([], 0) field_list
   in
     Ex(Tr.ESEQ(seq (head::(List.rev nodes)), Tr.TEMP(base)))
   end
@@ -237,6 +240,8 @@ struct
       let
           val sl = get_static_link (callLevel, decLevel, Frame.FP)
       in
-          Tr.CALL(Tr.NAME label, sl::(map unEx args))
+          Ex (Tr.CALL(Tr.NAME label, sl::(map unEx args)))
       end
+
+
 end

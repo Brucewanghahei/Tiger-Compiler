@@ -597,9 +597,11 @@ struct
     end
     
     and transProg (exp) =
-        let val mainlevel = R.newLevel {parent = R.outermost, name = Temp.namedlabel "main", escapes = []}
+        let val mainlevel =
+          R.newLevel {parent = R.outermost, name = Temp.namedlabel "tiger_main", escapes = []}
+          val {exp=exp, ty=ty} = transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newLabel());
         in
-            transExp(E.base_venv, E.base_tenv, exp, mainlevel, Temp.newLabel());
-            ()
+          R.procEntryExit (exp, mainlevel);
+          R.getResult()          
         end
 end
