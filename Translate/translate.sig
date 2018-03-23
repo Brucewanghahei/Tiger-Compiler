@@ -41,6 +41,7 @@ sig
     val ifExp: (exp * exp) -> exp
     val ifelseExp: (exp * exp * exp) -> exp
     val forExp: (exp * Tree.label * exp * exp * exp) -> exp
+    val call: (level * level * Temp.label * exp list, bool) -> exp
     
     (* call_level * definition_level * current_fp -> access -> IR *) 
     val trace_levels: (level * level * Temp.temp) -> Frame.access -> Tree.exp
