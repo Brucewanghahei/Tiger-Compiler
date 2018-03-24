@@ -48,5 +48,11 @@ withtype field = {name: symbol, escape: bool ref,
                 body: exp,
                 pos: pos}
      
+fun VarName var =
+  case var of (SimpleVar (sym, pos)) => Symbol.name sym
+    | (FieldVar (field_var, sym, pos)) => (VarName field_var) ^ "." ^
+     (Symbol.name sym)
+    | (SubscriptVar (sub_var, exp, pos)) => (VarName sub_var) ^ "[...]"
+
 end
         

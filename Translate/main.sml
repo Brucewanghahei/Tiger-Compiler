@@ -10,6 +10,7 @@ struct
       | Translate.Frame.STRING (string_label, str) => Tree.LABEL(string_label)) frag_list
     val out = TextIO.stdOut
   in
-    map (fn stm => Printtree.printtree(out, stm)) stm_list 
+    (* map (fn stm => Printtree.printtree(out, stm)) stm_list *)
+    ()
   end
 end

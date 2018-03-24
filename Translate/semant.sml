@@ -63,7 +63,7 @@ struct
 
   fun assertTypeEq (lhs: Ty.ty, rhs: Ty.ty, errCurry, msg) =
     if not (compareAnyType(actual_ty(lhs), actual_ty(rhs))) then
-      errCurry msg
+      errCurry (msg^"\nLtype="^(Ty.name lhs)^" Rtype="^(Ty.name rhs))
     else
       ()
 
@@ -156,8 +156,9 @@ struct
         ^ "\ninput tpye: " ^ (Ty.name input_ty));
         f (param_tail, input_tail)
         )
+      | f ([_], []) = err pos ("Function " ^ func_name ^ ": Need more input parameters")
+      | f ([], [_]) = err pos ("Function " ^ func_name ^ ": Too many input parameters")
       | f ([], []) = () 
-      | f (_, _) = err pos ("Parameter size mismatch: function " ^ func_name) 
   in
     f(formals, args)
   end
@@ -168,7 +169,8 @@ struct
           case lookupVariable(venv, sym, pos) of
               SOME (E.VarEntry{access=access, ty=ty, ...}) => {exp=R.simpleVar(access, level), ty=ty}
             | SOME _ => ((err pos "exptected variable, found function"); {exp=R.dummy_exp, ty=Ty.NIL})
-            | NONE => {exp=R.dummy_exp, ty=Ty.NIL} ) (* dummy pattern match*)
+            | NONE => (err pos ("Variable not found: " ^ (A.VarName (A.SimpleVar(sym, pos))));
+                  {exp=R.dummy_exp, ty=Ty.NIL} )) (* dummy pattern match*)
       | trvar(A.FieldVar(lvalue, sym, pos)) =
         let
           val {exp=base_pointer, ty=lvalue_ty} = transVar(venv, tenv, lvalue, level)
@@ -182,7 +184,8 @@ struct
             end
           | _ => 
             (
-            err pos "Record requried";
+            err pos ("Variable " ^ (A.VarName (A.FieldVar(lvalue, sym, pos))) ^
+            " : Record type requried.\nGiven type: " ^ (Ty.name lvalue_ty));
             {exp=R.dummy_exp, ty=Ty.UNIT}
             )
         end
@@ -193,14 +196,15 @@ struct
           case actual_ty lvalue_ty of
             Ty.ARRAY (ty, uni) =>
             let
-              val {exp=k_exp, ty=ty} = transExp(venv, tenv, exp, level, Temp.newlabel())
-              val _ = assertTypeEq(ty, Ty.INT, err pos, "Array index type should integer");
+              val {exp=k_exp, ty=k_ty} = transExp(venv, tenv, exp, level, Temp.newlabel())
+              val _ = assertTypeEq(k_ty, Ty.INT, err pos, "Array index type should integer");
             in
               {exp=R.subVar(base_pointer, k_exp), ty=ty}          
             end
           | _ =>
               (
-              err pos "Array required";
+              err pos ("Variable " ^ (A.VarName (A.SubscriptVar(lvalue, exp, pos)))
+              ^ " : Array type required.\nGiven type: "^(Ty.name lvalue_ty));
               {exp=R.dummy_exp, ty=Ty.UNIT}
               )
         end
@@ -291,12 +295,13 @@ struct
         val entry = lookupFunEntry(venv, func, pos)
         val result = case entry of SOME (E.FunEntry{result=result, ...}) => result
                                  | NONE => Ty.NIL
+        val arg_exps = map trexp args
       in
           case entry of
                SOME (E.FunEntry{level=funLevel, label=label, formals=formals, result=result}) =>
-               (checkFuncParams(S.name func, formals, map #ty (map trexp args), pos);
+               (checkFuncParams(S.name func, formals, map #ty arg_exps, pos);
                 {
-                  exp = R.call(level, funLevel, label, map (fn arg => #exp (trexp arg)) args),
+                  exp = R.call(level, funLevel, label, map #exp arg_exps),
                   ty = result
                })
              | NONE => {
@@ -331,7 +336,8 @@ struct
       in
         (
         assertAssignable(venv, var, pos); 
-        assertTypeEq(varTy, expTy, err pos, "Assignment type mismatch");
+        assertTypeEq(varTy, expTy, err pos, "Assignment " ^
+          A.VarName var  ^ " type mismatch");
         {exp=R.assign(vExp, eExp), ty=Ty.UNIT}
         )
       end
@@ -339,14 +345,14 @@ struct
       let
         val _ = loopLevel := !loopLevel + 1
         val breakLabel = Tp.newlabel() 
-        val {exp=testExp, ty=_} = transExp (venv, tenv, test, level, breakLabel)
-        val {exp=bodyExp, ty=_} = transExp (venv, tenv, body, level, breakLabel)
+        val {exp=testExp, ty=test_ty} = transExp (venv, tenv, test, level, breakLabel)
+        val {exp=bodyExp, ty=body_ty} = transExp (venv, tenv, body, level, breakLabel)
         val _ = loopLevel := !loopLevel - 1
         val _ = breakNum := 0
       in
         (
-        checkInt(trexp test, pos, "Invalid WHILE loop test type, INT expected");
-        checkNoValue(trexp body, pos, "Invalid WHILE loop body type, UNIT expected");
+        assertTypeEq(test_ty, Ty.INT, err pos, "Invalid WHILE loop test type, INT expected");
+        assertTypeEq(body_ty, Ty.UNIT,err pos, "Invalid WHILE loop body type, UNIT expected");
         {exp=(R.whileExp(testExp, bodyExp, breakLabel)), ty=Ty.UNIT}
         )
       end
@@ -426,179 +432,179 @@ struct
 
     and transDec (venv:venv, tenv:tenv, dec, level, breakLabel) =
       let fun trdec (A.VarDec{name, escape, typ, init, pos, ...}) =
-              let val {exp, ty} = transExp(venv, tenv, init, level, breakLabel)
-                  val msgTmpl = "VarDec: "
-                  (* translate *)
-                  val access = R.allocLocal level (!escape)
-                  val varexp = R.simpleVar(access, level)
-              in
-                  case typ of
-                      SOME(s, _) =>
-                      let 
-                          val decTy = lookType(tenv, s, pos)
-                      in
-                          assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
-                                                           ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
-                                                           ^ "\nInit type: " ^ (Ty.name ty))
-                      end
-                    | NONE => assertEq(actual_ty ty, Ty.NIL, op <>, err pos, msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly")
-                ;
-                        {
-                          venv = S.enter(venv, name, E.VarEntry{access = access, ty = ty, assignable = true}),
-                          tenv = tenv,
-                          exps = [R.assign(varexp, exp)]
-                        }
-              end
-            | trdec (A.TypeDec(tydecs)) =
+       let val {exp, ty} = transExp(venv, tenv, init, level, breakLabel)
+         val msgTmpl = "VarDec: "
+         (* translate *)
+         val access = R.allocLocal level (!escape)
+         val varexp = R.simpleVar(access, level)
+       in
+         case typ of
+           SOME(s, _) =>
+           let 
+             val decTy = lookType(tenv, s, pos)
+           in
+             assertTypeEq(ty, decTy, err pos, msgTmpl ^ S.name name
+              ^ " - type mismatch\nVariable type: " ^ (Ty.name decTy) 
+              ^ "\nInit type: " ^ (Ty.name ty))
+           end
+          | NONE => assertEq(actual_ty ty, Ty.NIL, op <>, err pos, 
+            msgTmpl ^ S.name name ^ " cannot be assigned to nil implicitly");
+            {
+             venv = S.enter(venv, name, E.VarEntry{access = access, ty = ty, assignable = true}),
+             tenv = tenv,
+             exps = [R.assign(varexp, exp)]
+            }
+       end
+      | trdec (A.TypeDec(tydecs)) =
+       let
+         val msgTmpl = "TypeDec: "
+         (* first pass to scan headers*)
+         fun trTyDecHeaders (tenv:tenv, tydecs) =
+         let
+          val temp_tenv = S.empty;
+          val (new_tenv, tmp_tenv) =
+           foldl (fn ({name, ty, pos}, (acc, acc_temp)) => (
+           S.enter(acc, name,
+           Types.NAME(name, ref NONE)), 
+           (case S.look(acc_temp, name) of
+              SOME ty => (err pos (msgTmpl ^ "same mutually recursive type name"); acc_temp)
+             | NONE => S.enter(acc_temp, name, Ty.UNIT))
+           )
+           ) (tenv, temp_tenv) tydecs
+         in
+          new_tenv
+         end
+         (* second pass to fill ref *)
+
+         fun trTyDecBody (tenv, {name, ty, pos}) =
+           let val tyHeader = transTy(tenv, ty)
+           in
+            case lookType(tenv, name, pos) of
+              (Ty.NAME (_, tyref)) => tyref := SOME tyHeader
+              | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header")
+           end
+
+         (* check alias cycle: ignore array/record *)
+         fun checkTyDecCycle (tenv, tydecs) =
+           let
+             val nodes = map (fn {name, ty, pos} => name) tydecs
+             fun dfs (node, parent, start) =
+               if node = parent orelse node = start then
+                 true
+               else
+                 dfsHelper(node, start)
+             and dfsHelper (node, start) =
+               case lookType(tenv, node, 0) of
+                 Ty.NAME(snode, tyref) =>
+                 (
+                  case !tyref of
+                    SOME ty =>
+                    (
+                     case ty of Ty.NAME(snext, _) =>
+                           dfs(snext, snode, start)
+                         | _ => false
+                    )
+                   | _ => false
+                 )
+                | _ => false
+           in
+             List.exists (fn node => dfsHelper(node, node)) nodes
+           end
+
+         val tenv' = trTyDecHeaders(tenv, tydecs)
+       in
+         map (fn dec => trTyDecBody(tenv', dec)) tydecs;
+         assertEq(checkTyDecCycle(tenv', tydecs), false, op =, err 0, msgTmpl ^ " cycle(no record/array) detected in mutual recursion");
+         {
+          venv = venv,
+          tenv = tenv',
+          exps = []
+         }
+       end
+      | trdec (A.FunctionDec fundecs) =
+       let
+         val msgTmpl = "FunDec: "
+         fun trParams (params: A.field list) pos=
+           {
+            nameTys = map (fn ({typ, name, ...}) => (name, lookType(tenv, typ, pos))) params,
+            escapes = map (fn ({escape, ...}) => !escape) params
+           }
+         (* first pass to scan headers*)
+
+         fun trResult NONE = Ty.UNIT
+          | trResult (SOME(s, pos)) = 
+           case lookActualType(tenv, s, pos) of
+             Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
+            | t => t
+
+         fun trFunDecHeaders (venv:venv, decs) =
+           let
+             val (venv', _) =
+               foldl
+                 (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
+                   let
+                     val resultTy = trResult result
+                     val {nameTys, escapes, ...} = trParams params pos
+                     val newLabel = Tp.newlabel()
+                     val entry = E.FunEntry{
+                         level = R.newLevel{parent = level, name = newLabel, escapes = escapes},
+                         label = newLabel,
+                         formals = nameTys,
+                         result = resultTy
+                       }
+                   in
+                     (
+                      S.enter(acc, name, entry),
+                      case S.look(accTemp, name) of
+                        SOME _ => (err pos
+                                (msgTmpl ^ "same mutually recursive function declaration");
+                              accTemp)
+                       | NONE => S.enter(accTemp, name, entry)
+                     )
+                   end)
+                 (venv, S.empty)
+                 decs
+           in
+             venv'
+           end
+
+         val venv' = trFunDecHeaders(venv, fundecs)
+
+         (* second pass to translate body*)
+         fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
+           let
+             val resultTy = trResult result
+             val {nameTys, escapes, ...} = trParams params pos
+             fun enterParam (((name, ty), escape), venv:venv) =
               let
-                  val msgTmpl = "TypeDec: "
-                  (* first pass to scan headers*)
-                  fun trTyDecHeaders (tenv:tenv, tydecs) =
-                  let
-                    val temp_tenv = S.empty;
-                    val (new_tenv, tmp_tenv) =
-                      foldl (fn ({name, ty, pos}, (acc, acc_temp)) => (
-                      S.enter(acc, name,
-                      Types.NAME(name, ref NONE)), 
-                      (case S.look(acc_temp, name) of
-                           SOME ty =>  (err pos (msgTmpl ^ "same mutually recursive type name"); acc_temp)
-                         | NONE => S.enter(acc_temp, name, Ty.UNIT))
-                      )
-                      ) (tenv, temp_tenv) tydecs
-                  in
-                    new_tenv
-                  end
-                  (* second pass to fill ref *)
-
-                  fun trTyDecBody (tenv, {name, ty, pos}) =
-                      let val tyHeader = transTy(tenv, ty)
-                      in
-                        case lookType(tenv, name, pos) of
-                            (Ty.NAME (_, tyref)) => tyref := SOME tyHeader
-                            | _ => Err.impossible (msgTmpl ^ S.name name ^ " not found in header")
-                      end
-
-                  (* check alias cycle: ignore array/record *)
-                  fun checkTyDecCycle (tenv, tydecs) =
-                      let
-                          val nodes = map (fn {name, ty, pos} => name) tydecs
-                          fun dfs (node, parent, start) =
-                              if node = parent orelse node = start then
-                                  true
-                              else
-                                  dfsHelper(node, start)
-                          and dfsHelper (node, start) =
-                              case lookType(tenv, node, 0) of
-                                  Ty.NAME(snode, tyref) =>
-                                  (
-                                    case !tyref of
-                                        SOME ty =>
-                                        (
-                                          case ty of Ty.NAME(snext, _) =>
-                                                     dfs(snext, snode, start)
-                                                  | _ => false
-                                        )
-                                      | _ => false
-                                  )
-                                | _ => false
-                      in
-                          List.exists (fn node => dfsHelper(node, node)) nodes
-                      end
-
-                  val tenv' = trTyDecHeaders(tenv, tydecs)
+               val access = R.allocLocal level escape
               in
-                  map (fn dec => trTyDecBody(tenv', dec)) tydecs;
-                  assertEq(checkTyDecCycle(tenv', tydecs), false, op =, err 0, msgTmpl ^ " cycle(no record/array) detected in mutual recursion");
-                  {
-                    venv = venv,
-                    tenv = tenv',
-                    exps = []
-                  }
+               S.enter(venv, name, E.VarEntry{access = access, ty
+               = ty, assignable = true})
               end
-            | trdec (A.FunctionDec fundecs) =
-              let
-                  val msgTmpl = "FunDec: "
-                  fun trParams (params: A.field list) pos=
-                      {
-                        nameTys = map (fn ({typ, name, ...}) => (name, lookType(tenv, typ, pos))) params,
-                        escapes = map (fn ({escape, ...}) => !escape)  params
-                      }
-                  (* first pass to scan headers*)
-
-                  fun trResult NONE = Ty.UNIT
-                    | trResult (SOME(s, pos)) = 
-                      case lookActualType(tenv, s, pos) of
-                          Ty.NIL => (err pos(msgTmpl ^ "return value cannot be given as nil"); Ty.NIL)
-                        | t => t
-
-                  fun trFunDecHeaders (venv:venv, decs) =
-                      let
-                          val (venv', _) =
-                              foldl
-                                  (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
-                                      let
-                                          val resultTy = trResult result
-                                          val {nameTys, escapes, ...} = trParams params pos
-                                          val newLabel = Tp.newlabel()
-                                          val entry = E.FunEntry{
-                                                  level = R.newLevel{parent = level, name = newLabel, escapes = escapes},
-                                                  label = newLabel,
-                                                  formals = nameTys,
-                                                  result = resultTy
-                                              }
-                                      in
-                                          (
-                                            S.enter(acc, name, entry),
-                                            case S.look(accTemp, name) of
-                                                SOME _ => (err pos
-                                                               (msgTmpl ^ "same mutually recursive function declaration");
-                                                           accTemp)
-                                              | NONE => S.enter(accTemp, name, entry)
-                                          )
-                                      end)
-                                  (venv, S.empty)
-                                  decs
-                      in
-                          venv'
-                      end
-
-                  val venv' = trFunDecHeaders(venv, fundecs)
-
-                  (* second pass to translate body*)
-                  fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
-                      let
-                          val resultTy = trResult result
-                          val {nameTys, escapes, ...} = trParams params pos
-                          fun enterParam (((name, ty), escape), venv:venv) =
-                            let
-                              val access = R.allocLocal level escape
-                            in
-                              S.enter(venv, name, E.VarEntry{access = access, ty
-                              = ty, assignable = true})
-                            end
-                          val venv' = foldl enterParam venv (ListPair.zip
-                          (nameTys, escapes))
-                          val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, level, Temp.newlabel())
-                      in
-                          assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
-                          (S.name name) ^ " type mismatch.\nReturn type: " ^
-                          (Ty.name resultTy) ^ "\nBody type: " ^ (Ty.name
-                          bodyTy))
-                        ;
-                          (case lookupFunEntry(venv, name, pos) of
-                                (SOME (E.FunEntry ({level, ...}))) => R.procEntryExit(bodyExp, level))
-                      end
-              in
-                  map (fn dec => trFunDecBody(venv', dec)) fundecs;
-                  {
-                    venv = venv',
-                    tenv = tenv ,
-                    exps = []
-                  }
-              end
-      in
-          trdec dec
-      end
+             val venv' = foldl enterParam venv (ListPair.zip
+             (nameTys, escapes))
+             val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, level, Temp.newlabel())
+           in
+             assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
+             (S.name name) ^ " type mismatch.\nReturn type: " ^
+             (Ty.name resultTy) ^ "\nBody type: " ^ (Ty.name
+             bodyTy))
+            ;
+             (case lookupFunEntry(venv, name, pos) of
+                (SOME (E.FunEntry ({level, ...}))) => R.procEntryExit(bodyExp, level))
+           end
+       in
+         map (fn dec => trFunDecBody(venv', dec)) fundecs;
+         {
+          venv = venv',
+          tenv = tenv ,
+          exps = []
+         }
+       end
+   in
+     trdec dec
+   end
       
     and transTy (tenv:tenv, ty:A.ty) =
     let
