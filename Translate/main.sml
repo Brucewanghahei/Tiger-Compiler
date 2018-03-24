@@ -3,7 +3,9 @@ struct
   fun compile filename =
   let
     val absyn_exp = Parse.parse filename
-    val frag_list = Semant.transProg(absyn_exp) 
+    val frag_list = (
+        FindEscape.findEscape absyn_exp;
+        Semant.transProg(absyn_exp)) 
     val stm_list = map (fn frag =>
     case frag of 
         Translate.Frame.PROC {body=body, frame=frame} => body
