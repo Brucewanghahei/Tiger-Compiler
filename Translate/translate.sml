@@ -111,6 +111,15 @@ struct
 
   fun createArray (init_exp, size_exp) = 
       Ex (Frame.externalCall("initArray", [unEx size_exp, unEx init_exp]))
+
+  fun seqexp [] = Ex(Tr.CONST(0))
+    | seqexp exp_list =
+    let
+      val tail::body =  exp_list
+      val stm_list = map unNx (List.rev body)
+    in
+      Ex(Tr.ESEQ(seq stm_list, unEx tail))
+    end
     
   fun strlit s =
       let

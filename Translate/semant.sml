@@ -252,17 +252,16 @@ struct
       end
     | trexp (A.SeqExp seq) =
       let
-          fun f seq =
-          case seq of
-               [] => {exp=R.dummy_exp, ty=Ty.UNIT}
-             | [(exp, pos)] => trexp(exp)
-             | (exp, pos)::tail =>
-                 (
-                 trexp(exp);
-                 f(tail)
-                 )
+          fun f seq_list =
+            foldl (fn ((abs_seq, pos_seq), (ir_exp_list, tail_ty)) => 
+            let
+              val {exp=ir_exp, ty=seq_ty} = trexp abs_seq
+            in
+              (ir_exp :: ir_exp_list, seq_ty)
+            end) ([], Ty.UNIT) seq_list
+          val (ir_exp_list, tail_ty) = f seq
       in
-        f seq
+        {exp=R.seqexp(ir_exp_list), ty=tail_ty}
       end
     | trexp (A.ForExp {var=for_sym, escape=escape, lo=lo, hi=hi, body=body, pos=pos}) =
       let 
