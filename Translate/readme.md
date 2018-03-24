@@ -31,3 +31,8 @@ What we implement
 As the number of variables that should be stored in the frame/registers cannot be known until `reg alloc` phase,
 we only put the label and the body of the function in the `fragment` for it. So only procEntryExit1 is implemented in this phase.
 `procEntryExit2` and `procEntryExit3` which handle the stack/frame pointer and the callee save/restore of `view shift` will be implemented later.
+
+
+# FindEscape
+We implemented the findescape feature (maybe not ready to launch at this phase ... but the codes are there)
+
