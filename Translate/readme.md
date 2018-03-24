@@ -21,6 +21,8 @@ val it = true : bool
  val it = [()] : unit list
 ```
 
+We also implement a test.sh to automate the test.
+
 What we implement
 ---
 
