@@ -2,6 +2,7 @@ signature FRAME =
 sig 
   type frame
   type access
+  type register
   val newFrame : {name: Temp.label,
                 escapes: bool list} -> frame
   val name : frame -> Temp.label
@@ -20,4 +21,7 @@ sig
   
   val procEntryExit1 : frame * Tree.stm -> Tree.stm
   val procEntryExit2: frame * Assem.instr list -> Assem.instr list
+                                                              
+  val tempMap: register Temp.Map
+  val temp2str: Temp.temp -> string
 end
