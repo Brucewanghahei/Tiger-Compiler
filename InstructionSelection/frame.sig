@@ -9,8 +9,15 @@ sig
   val formals : frame -> access list
   val allocLocal : frame -> bool -> access
   
-  val FP : Temp.temp
-  val RV: Temp.temp
+  val FP: Temp.temp
+  val SP: Temp.temp
+  val RV: Temp.temp (* for return value *)
+  val RA: Temp.temp
+  val namedRegs: Temp.temp list
+  val argRegs: Temp.temp list
+  val callersaveRegs: Temp.temp list
+  val calleesaveRegs: Temp.temp list
+
   val wordSize: int
   val exp : access -> Tree.exp -> Tree.exp
   
