@@ -27,3 +27,5 @@ main.sml
 findescape.sml
 canon.sml
 assem.sml
+codegen.sig
+mips.sml
