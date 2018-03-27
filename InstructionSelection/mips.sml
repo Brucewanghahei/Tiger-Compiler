@@ -9,7 +9,15 @@ structure A = Assem
 fun codegen (frame) (stm: Tree.stm) : Aseem.instr list =
 let
   val ilist = ref (nil: A.instr list)
+  fun emit x = ilist := x :: !ilist
   fun result (gen) = let val t = Temp.newtemp() in gen t; t end
+
+  (* calling a function will trash a particular set of registers: *)
+  (*   - args: they are defined to pass parameters; *)
+  (*   - callersaves: they may be redefined inside the call; *)
+  (*   - RA: it will be overwritten for function return. *)
+  (*   - RV: it will be overwritten for function return. *)
+  val calldefs = Frame.RA :: (Frame.RV :: Frame.argRegs) @ Frame.callersaveRegs
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
   	| munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i), e2)))
