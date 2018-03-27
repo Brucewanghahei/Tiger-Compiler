@@ -26,3 +26,4 @@ printtree.sml
 main.sml
 findescape.sml
 canon.sml
+assem.sml
