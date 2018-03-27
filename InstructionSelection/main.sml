@@ -13,9 +13,13 @@ structure Main = struct
                    (* val _ = app (fn s => Printtree.printtree(out,s)) stms; *)
            val stms' = Canon.traceSchedule(Canon.basicBlocks stms)
 	       val instrs =   List.concat(map (Mips.codegen frame) stms') 
+           val instrs2 = F.procEntryExit2(frame, instrs)
+           val {prolog, body = bodyInstrs, epilog} = F.procEntryExit3(frame, instrs2)
            val format0 = Assem.format(Temp.makestring)
        in
-           app (fn i => TextIO.output(out,format0 i)) instrs
+           TextIO.output(out,prolog);
+           app (fn i => TextIO.output(out,format0 i)) instrs2;
+           TextIO.output(out,epilog)
        end
      | emitproc out (F.STRING(lab,s)) = TextIO.output(out,F.string(lab,s))
 

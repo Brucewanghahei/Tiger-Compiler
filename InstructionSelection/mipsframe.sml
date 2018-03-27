@@ -118,4 +118,16 @@ struct
           Tree.SEQ (Tree.LABEL name, body)
       end
 
+  fun procEntryExit2 (funFrame, bodyInstrs) =
+      bodyInstrs @ [A.OPER(assem = "",
+                     src = [ZERO, RA, SP] @ calleesaveRegs,
+                     dst = [],
+                     jump = SOME [])]
+
+  fun procEntryExit3 (frame(name, params, k), bodyInstrs) =
+      {
+        prolog = "PROCEDURE " ^ Symbol.name name ^ "\n",
+        body = bodyInstrs,
+        epilog = "END " & Symbol.name name "\n"
+      }
 end
