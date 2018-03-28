@@ -83,7 +83,13 @@ let
 			 src=[munchExp e1, munchExp e2],
 			 dst=[r], jump=NONE}))
   	| munchExp (T.TEMP t) = t
-  	| munchExp _ =
+  	| munchExp (T.NAME n) =
+      result(fn r => emit(A.OPER
+        {assem="ADDI 'd0 <- r0+" ^ (Symbol.name n) ^ "\n",,
+        src=[],
+        dst=[r], jump=NONE}))
+    | munchExp (T.ESEQ(_, _)) = ErrorMsg.impossible "Error, ESEQ should not appear in Tree linearization"
+    | munchExp _ =
 	   result(fn r => emit(A.OPER
 			 {assem="",
 			 src=[],
