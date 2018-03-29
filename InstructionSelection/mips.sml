@@ -1,6 +1,7 @@
 structure Mips:> CODEGEN =
 struct
 structure Frame = MipsFrame
+structure T = Tree
 
 fun int x = Int.toString x
 
@@ -19,6 +20,19 @@ let
   (*   - RV: it will be overwritten for function return. *)
   val calldefs = Frame.RA :: (Frame.RV :: Frame.argRegs) @ Frame.callersaveRegs
 
+  fun oper2jump oper =
+    case oper of
+      T.EQ => "beq"
+      | T.NE => "bne"
+      | T.LT => "blt"
+      | T.GT => "bgt"
+      | T.LE => "ble"
+      | T.GE => "bge"
+      | T.ULT => "bult"
+      | T.UGT => "bugt"
+      | T.ULE => "bule"
+      | T.UGE => "buge"
+      
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
   	| munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i), e2)))
   	| (T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1), e2)))) =
@@ -44,7 +58,19 @@ let
   	| munchStm (T.LABEL lab) =
 		emit(A.OPER{assem=lab ^ ":\n",
 					lab=lab})
- 	| munchStm _ =
+    | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
+    emit(A.OPER{assem=oper2jump (oper) ^ " 'd0, 's0, 's1\n",
+          src=[munchExp e1, munchExp e2],
+          dst=[], jum=SOME([trueLabel, falseLabel])})
+    | munchStm (T.JUMP(e1, labelList)) =
+    emit(A.OPER{assem="jr 'j0\n",
+          src=[munchExp e1],
+          dst=[], jump=SOME(labelList)})
+    | munchStm (T.JUMP(T.NAME label, labelList)) =
+    emit(A.OPER{assem="jr 'j0\n",
+          src=[munchExp e1],
+          dst=[], jump=SOME([label])})
+    | munchStm _ =
 		emit(A.OPER{assem="",
 					src=[],
 					dst=[], jump=NONE})
