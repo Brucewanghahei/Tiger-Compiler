@@ -48,28 +48,35 @@ let
 					src=[munchExp e2],
 					dst=[], jump=NONE})
   	| munchStm (T.MOVE(T.MEM(e1), e2)) =
-		emit(A.OPER{assem="STORE M['s0] <- 's1\n",
-					src=[munchExp e1, munchExp e2],
-					dst=[], jump=NONE})
+	  emit(A.OPER{assem="STORE M['s0] <- 's1\n",
+				  src=[munchExp e1, munchExp e2],
+				  dst=[], jump=NONE})
   	| munchStm (T.MOVE(T.TEMP i, e2)) =
-		emit(A.OPER{assem="ADD 'd0 <- 's0 + r0\n",
-					src=[munchExp e2],
-					dst=[i], jump=NONE})
+	  emit(A.OPER{assem="ADD 'd0 <- 's0 + r0\n",
+				  src=[munchExp e2],
+				  dst=[i], jump=NONE})
   	| munchStm (T.LABEL lab) =
-		emit(A.OPER{assem=lab ^ ":\n",
-					lab=lab})
+	  emit(A.OPER{assem=lab ^ ":\n",
+				  lab=lab})
     | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
-    emit(A.OPER{assem=oper2jump (oper) ^ " 'd0, 's0, 's1\n",
-          src=[munchExp e1, munchExp e2],
-          dst=[], jum=SOME([trueLabel, falseLabel])})
+      emit(A.OPER{assem=oper2jump (oper) ^ " 'd0, 's0, 's1\n",
+                  src=[munchExp e1, munchExp e2],
+                  dst=[], jum=SOME([trueLabel, falseLabel])})
     | munchStm (T.JUMP(e1, labelList)) =
-    emit(A.OPER{assem="jr 'j0\n",
+      emit(A.OPER{assem="jr 'j0\n",
           src=[munchExp e1],
           dst=[], jump=SOME(labelList)})
     | munchStm (T.JUMP(T.NAME label, labelList)) =
-    emit(A.OPER{assem="jr 'j0\n",
+      emit(A.OPER{assem="jr 'j0\n",
           src=[munchExp e1],
           dst=[], jump=SOME([label])})
+    (* return value of call isn't needed *)
+    | munchStm (T.EXP(T.CALL(e, args))) =
+      emit(A.OPER
+               {assem = "jalr 's0\n",
+                src = munchExp(e)::munchArgs(0, args),
+                dst = calldefs,
+                jump = NONE})
     | munchStm _ =
 		emit(A.OPER{assem="",
 					src=[],
@@ -114,6 +121,14 @@ let
         {assem="ADDI 'd0 <- r0+" ^ (Symbol.name n) ^ "\n",,
         src=[],
         dst=[r], jump=NONE}))
+    | munchExp (T.CALL(e, args)) =
+      result(fn r => emit(A.OPER
+                              {assem = "jalr 's0\n",
+                               src = munchExp(e)::munchArgs(0, args),
+                               dst = calldefs,
+                               jump = NONE}))
+    | munchExp (T.CALL(_, _)) = ErrorMsg.impossible "Function call exp format error"
+      
     | munchExp (T.ESEQ(_, _)) = ErrorMsg.impossible "Error, ESEQ should not appear in Tree linearization"
     | munchExp _ =
 	   result(fn r => emit(A.OPER
@@ -121,8 +136,8 @@ let
 			 src=[],
 			 dst=[r], jump=NONE}))
 
-  and munchArg (i, []) = []
-    | munchArg (i, arg::tl) =
+  and munchArgs (i, []) = []
+    | munchArgs (i, arg::tl) =
       let
           val len = List.length Frame.argRegs
           val dstTemp = ref F.FP;
@@ -133,7 +148,7 @@ let
           val _ = munchStm(T.MOVE(dst, arg))
       in
           if(i < len + 1) then
-              !dstTemp::tl
+              !dstTemp::munchArgs(i+1, tl)
           else
               []
       end
