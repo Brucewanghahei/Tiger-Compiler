@@ -120,6 +120,23 @@ let
 			 {assem="",
 			 src=[],
 			 dst=[r], jump=NONE}))
+
+  and munchArg (i, []) = []
+    | munchArg (i, arg::tl) =
+      let
+          val len = List.length Frame.argRegs
+          val dstTemp = ref F.FP;
+          (* fist arg is static link *)
+          val dst = if (i > 0 andalso i < len + 1)
+                    then (dstTemp := List.nth(Frame.argRegs, i - 1); T.TEMP(!dstTemp))
+                    else (munchStm(T.MOVE(T.TEMP(F.SP), T.MINUS(T.PLUS, T.TEMP(F.SP), T.CONST Frame.wordSize))); T.MEM(T.TEMP(F.SP)))
+          val _ = munchStm(T.MOVE(dst, arg))
+      in
+          if(i < len + 1) then
+              !dstTemp::tl
+          else
+              []
+      end
 in
   munchStm stm;
   rev(!ilist)
