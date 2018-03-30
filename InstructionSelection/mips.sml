@@ -113,6 +113,12 @@ let
 
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
+    | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
+    result(fn r => era(gs (oper2jump (oper)), [munchExp e1, munchExp e2], [], SOME([trueLabel, falseLabel])))
+    | munchStm (T.JUMP(e1, labelList)) =
+    result(fn r => era(gs "jr", [munchExp e1], [], SOME(labelList)))
+    | munchStm (T.JUMP(T.NAME label, labelList)) =
+    result(fn r => era(gs "jr", [], [], SOME(labelList)))
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
   	| munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i), e2)))
