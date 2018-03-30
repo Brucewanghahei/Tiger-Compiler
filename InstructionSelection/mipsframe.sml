@@ -20,7 +20,7 @@ struct
   (* http://www.cs.uwm.edu/classes/cs315/Bacon/Lecture/HTML/ch05s03.html *)
 
   (* return values from functions *)
-  val v0 = Temp.newtemp()
+  (* val v0 = Temp.newtemp() *)
   val v1 = Temp.newtemp()
 
   (* first four params *)
@@ -58,7 +58,7 @@ struct
   val FP   = Temp.newtemp() (* frame pointer *)
   val SP   = Temp.newtemp() (* stack pointer *)
   val RA   = Temp.newtemp() (* return address *)
-  val RV   = Temp.newtemp() (* return value *)
+  val RV   = Temp.newtemp() (* return value (v0)*)
 
   val namedRegs = [FP, SP, RA, RV]
   val argRegs = [a0, a1, a2, a3]
@@ -69,9 +69,11 @@ struct
       [(a0,"$a0"),(a1,"$a1"),(a2,"$a2"),(a3,"$a3"),
        (t0,"$t0"),(t1,"$t1"),(t2,"$t2"),(t3,"$t3"),
        (t4,"$t4"),(t5,"$t5"),(t6,"$t6"),(t7,"$t7"),
+       (v0,"$v0"),(v1,"$v1"),(t8,"$t8"),(t9,"$t9"),
        (s0,"$s0"),(s1,"$s1"),(s2,"$s2"),(s3,"$s3"),
        (s4,"$s4"),(s5,"$s5"),(s6,"$s6"),(s7,"$s7"),
-       (FP,"$fp"),(RV,"$v0"),(SP,"$sp"),(RA,"$ra")]
+       (FP,"$fp"),(RV,"$v0"),(SP,"$sp"),(RA,"$ra"),
+       (ZERO,"$zero")]
 
   val tempMap = foldl (fn ((k, v), tbl) => Temp.Map.insert(tbl, k, v))
                       Temp.Map.empty regMapList
