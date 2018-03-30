@@ -131,4 +131,6 @@ struct
         body = bodyInstrs,
         epilog = "END " ^ (Symbol.name name) ^ "\n"
       }
+
+  fun string (lbl, str) = (Symbol.name lbl) ^ str
 end

@@ -1,13 +1,14 @@
-structure Mips:> CODEGEN =
+structure Mips: CODEGEN =
 struct
 structure Frame = MipsFrame
 structure T = Tree
+structure F = Frame
+structure A = Assem
 
 fun int x = Int.toString x
 
-structure A = Assem
 
-fun codegen (frame) (stm: Tree.stm) : Aseem.instr list =
+fun codegen (frame) (stm: Tree.stm) : Assem.instr list =
 let
   val ilist = ref (nil: A.instr list)
   fun emit x = ilist := x :: !ilist
@@ -83,9 +84,14 @@ let
   fun era (assem, src, dst, jump) =
     emit(A.OPER{assem=assem, src=src, dst=dst, jump=jump})
 
-  fun munchExp (T.BINOP(T.PLUS, e1, e2)) =
+  fun munchExp ((T.BINOP(T.PLUS, e1, T.CONST(i)))
+    | (T.BINOP(T.PLUS, T.CONST(i), e1))) =
+    result(fn r => era((gs "addi")(i), [munchExp e1], [r], NONE))
+    | munchExp (T.BINOP(T.PLUS, e1, e2)) =
     result(fn r => era((gs "add")(0), [munchExp e1, munchExp e2], [r], NONE))
-    | munchExp (T.BINOP(T.SUB, e1, e2)) =
+    | munchExp (T.BINOP(T.MINUS, e1, T.CONST(i))) =
+    result(fn r => era((gs "subi")(i), [munchExp e1], [r], NONE))
+    | munchExp (T.BINOP(T.MINUS, e1, e2)) =
     result(fn r => era((gs "sub")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MUL, e1, e2)) =
     result(fn r => era((gs "mul")(0), [munchExp e1, munchExp e2],
@@ -93,11 +99,6 @@ let
     | munchExp (T.BINOP(T.DIV, e1, e2)) =
     result(fn r => era(((gs "div")(0) ^ (gs "mflo")(0)), [munchExp e1, munchExp e2],
     [r], NONE))
-    | munchExp ((T.BINOP(T.ADDI, e1, T.CONST(i)))
-    | munchExp (T.BINOP(T.ADDI, T.CONST(i), e1))) =
-    result(fn r => era((gs "addi")(i), [munchExp e1], [r], NONE))
-    | munchExp (T.BINOP(T.SUBI, e1, T.CONST(i))) =
-    result(fn r => era((gs "subi")(i), [munchExp e1], [r], NONE))
     | munchExp (T.BINOP(T.AND, e1, e2)) = 
     result(fn r => era((gs "and")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.OR, e1, e2)) = 
@@ -110,10 +111,8 @@ let
     result(fn r => era((gs "srav")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.XOR, e1, e2)) = 
     result(fn r => era((gs "xor")(0), [munchExp e1, munchExp e2], [r], NONE))
-    | munchExp (T.MEM(e1)) =
-    result(fn r => era((gs "lw")(0), [munchExp e1], [r], NONE))
     | munchExp (T.CONST i) =
-    result(fn r => era("addi $rd, $zero, " ^ (int i)), [], [r], NONE)
+    result(fn r => era("addi $rd, $zero, " ^ (int i), [], [r], NONE))
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
     result(fn r => era((Symbol.name n) ^ ":\n", [], [], NONE))
@@ -141,52 +140,37 @@ let
             ))
     | munchExp (T.CALL(e, args)) =
       (
-        era((gs "jalr"), munchExp(e)::munchArgs(0, args), calldefs, NONE);
+        era((gs "jalr")(0), munchExp(e)::munchArgs(0, args), calldefs, NONE);
         Frame.RV
       )
+    (*
     | munchExp (T.CALL(_, _)) = ErrorMsg.impossible "Function call exp format error"
+    *)
     | munchExp (T.ESEQ(_, _)) = ErrorMsg.impossible "Error, ESEQ should not appear in Tree linearization"
-    | munchExp _ =
-	   result(fn r => emit(A.OPER
-			 {assem="",
-			 src=[],
-			 dst=[r], jump=NONE}))
 
   and munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
     | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
-    result(fn r => era(gs (oper2jump (oper)), [munchExp e1, munchExp e2], [], SOME([trueLabel, falseLabel])))
-    | munchStm (T.JUMP(e1, labelList)) =
-    result(fn r => era(gs "jr", [munchExp e1], [], SOME(labelList)))
+    era(gs (oper2jump (oper)) 0, [munchExp e1, munchExp e2], [],
+    SOME([l1, l2]))
     | munchStm (T.JUMP(T.NAME label, labelList)) =
-    result(fn r => era(gs "jr", [], [], SOME(labelList)))
+    era(gs "jr" 0, [], [], SOME(labelList))
+    | munchStm (T.JUMP(e1, labelList)) =
+    era(gs "jr" 0, [munchExp e1], [], SOME(labelList))
     | munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2))
     | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
-    era((gs "sw")(i), [munchExp e2], [], None)
+    era((gs "sw")(i), [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) =
-    era("sw $rt, " ^ (int i) ^ "($zero)", [munchExp e2], [], None)
+    era("sw $rt, " ^ (int i) ^ "($zero)", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
     era("sw $rt, 0($rs)", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP i, e2)) =
     era((gs "add")(0), [munchExp e2], [i], NONE)
   	| munchStm (T.LABEL lab) =
-	  emit(A.OPER{assem=lab ^ ":\n",
-				  lab=lab})
-    | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
-      emit(A.OPER{assem=oper2jump (oper) ^ " 'd0, 's0, 's1\n",
-                  src=[munchExp e1, munchExp e2],
-                  dst=[], jum=SOME([trueLabel, falseLabel])})
-    | munchStm (T.JUMP(e1, labelList)) =
-      emit(A.OPER{assem="jr 'j0\n",
-          src=[munchExp e1],
-          dst=[], jump=SOME(labelList)})
-    | munchStm (T.JUMP(T.NAME label, labelList)) =
-      emit(A.OPER{assem="jr 'j0\n",
-          src=[munchExp e1],
-          dst=[], jump=SOME([label])})
+    era((Symbol.name lab) ^ ":\n", [], [], NONE)
     (* return value of call isn't needed *)
     | munchStm (T.EXP(T.CALL(e, args))) =
       era(
-          (gs "jalr"),
+          (gs "jalr" 0),
           munchExp(e)::munchArgs(0, args),
           calldefs,
           NONE
@@ -204,7 +188,7 @@ let
           (* fist arg is static link *)
           val dst = if (i > 0 andalso i < len + 1)
                     then (dstTemp := List.nth(Frame.argRegs, i - 1); T.TEMP(!dstTemp))
-                    else (munchStm(T.MOVE(T.TEMP(F.SP), T.MINUS(T.PLUS, T.TEMP(F.SP), T.CONST Frame.wordSize))); T.MEM(T.TEMP(F.SP)))
+                    else (munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST Frame.wordSize))); T.MEM(T.TEMP(F.SP)))
           val _ = munchStm(T.MOVE(dst, arg))
       in
           if(i < len + 1) then
