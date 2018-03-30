@@ -166,8 +166,10 @@ let
     era("sw $rt, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
     era("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
-    | munchStm (T.MOVE(T.TEMP i, e2)) =
-    era((gs "add")(""), [munchExp e2], [i], NONE)
+    | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
+    era((gs "addi" (int i)) , [], [t], NONE)
+    | munchStm (T.MOVE(T.TEMP t, e2)) =
+    era("add $rd $rs $zero\n" , [munchExp e2], [t], NONE)
   	| munchStm (T.LABEL lab) =
     era((Symbol.name lab) ^ ":\n", [], [], NONE)
     (* return value of call isn't needed *)
