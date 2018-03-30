@@ -113,6 +113,28 @@ let
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
     result(fn r => era((Symbol.name n) ^ ":\n", [], [], NONE))
+
+    | munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
+  	           | (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
+      result(fn r => era(
+                        (gs "lw" i),
+                        [munchExp e1],
+                        [r],
+                        NONE
+            ))
+  	| munchExp (T.MEM(T.CONST i)) =
+      result(fn r => era(
+                        "lw $rt " ^ int i ^ "($r0)\n",
+			            [],
+			            [r],
+                        NONE))
+ 	| munchExp (T.MEM(e1)) =
+      result(fn r => era(
+                        (gs "lw" 0),
+                        [munchExp e1],
+                        [r],
+                        NONE
+            ))
     | munchExp (T.CALL(e, args)) =
       (
         era((gs "jalr"), munchExp(e)::munchArgs(0, args), calldefs, NONE);
@@ -170,24 +192,7 @@ let
 					src=[],
 					dst=[], jump=NONE})
 
-
-  and munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
-  	| (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
-	   result(fn r => emit(A.OPER
-			 {assem="LOAD 'd0 <- M['s0+" ^ int i ^ "]\n",
-			 src=[munchExp e1],
-			 dst=[r], jump=NONE}))
-  	| munchExp (T.MEM(T.CONST i)) =
-        result(fn r => emit(A.OPER
-			 {assem="LOAD 'd0 <- M[r0+" ^ int i ^ "]\n",
-			 src=[],
-			 dst=[r], jump=NONE}))
- 	| munchExp (T.MEM(e1)) =
-	   result(fn r => emit(A.OPER
-			 {assem="LOAD 'd0 <- M['s0+0]\n",
-			 src=[munchExp e1],
-			 dst=[r], jump=NONE}))
-  	| munchExp ((T.BINOP(T.PLUS, e1, T.CONST i))
+    and munchExp ((T.BINOP(T.PLUS, e1, T.CONST i))
   	| (T.BINOP(T.PLUS, T.CONST i, e1))) =
 	   result(fn r => emit(A.OPER
 			 {assem="ADDI 'd0 <- 's0+" ^ int i ^ "\n",
