@@ -81,7 +81,7 @@ let
 
   (* emit wrapper on A.OPER *)
   fun era (assem, src, dst, jump) =
-    emit(A.OPER(assem=assem, src=src, dst=dst, jump))
+    emit(A.OPER{assem=assem, src=src, dst=dst, jump})
 
   fun munchExp (T.BINOP(T.PLUS, e1, e2)) =
     result(fn r => era((gs "add"), [munchExp e1, munchExp e2], [r], NONE))
@@ -90,7 +90,6 @@ let
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
     | munchStm (T.
-
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
   	| munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i), e2)))
