@@ -56,13 +56,13 @@ let
        | "and" | "or" | "xor" | "nor"
        | "slt" | "sltu"
        | "sllv" | "srlv" | "srav")
-       => (fn () => oper ^ dst)
+       => (fn (_) => oper ^ dst)
        | ("mult" | "multu" | "div" | "divu")
-       => (fn () => oper ^ st)
+       => (fn (_) => oper ^ st)
        | ("mfhi" | "mflo" )
-       => (fn () => oper ^ d)
+       => (fn (_) => oper ^ d)
        | ("jr" | "jalr" | "mthi" | "mtlo")
-       => (fn () => oper ^ s)
+       => (fn (_) => oper ^ s)
        | ("beq" | "bne")
        => (fn imm => oper ^ (sti imm))
        | ("addi" | "addiu" | "slti" | "sltiu"
@@ -84,35 +84,38 @@ let
     emit(A.OPER{assem=assem, src=src, dst=dst, jump})
 
   fun munchExp (T.BINOP(T.PLUS, e1, e2)) =
-    result(fn r => era((gs "add"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "add")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.SUB, e1, e2)) =
-    result(fn r => era((gs "sub"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "sub")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MUL, e1, e2)) =
-    result(fn r => era((gs "mul"), [munchExp e1, munchExp e2],
+    result(fn r => era((gs "mul")(0), [munchExp e1, munchExp e2],
     [r], NONE))
     | munchExp (T.BINOP(T.DIV, e1, e2)) =
-    result(fn r => era((gs "div") ^ (gs "mflo"), [munchExp e1, munchExp e2],
+    result(fn r => era(((gs "div")(0) ^ (gs "mflo")(0)), [munchExp e1, munchExp e2],
     [r], NONE))
     | munchExp ((T.BINOP(T.ADDI, e1, T.CONST(i)))
     | munchExp (T.BINOP(T.ADDI, T.CONST(i), e1))) =
-    result(fn r => era((gs "addi"), [munchExp e1], [r], NONE))
+    result(fn r => era((gs "addi")(i), [munchExp e1], [r], NONE))
     | munchExp (T.BINOP(T.SUBI, e1, T.CONST(i))) =
-    result(fn r => era((gs "subi"), [munchExp e1], [r], NONE))
+    result(fn r => era((gs "subi")(i), [munchExp e1], [r], NONE))
     | munchExp (T.BINOP(T.AND, e1, e2)) = 
-    result(fn r => era((gs "and"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "and")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.OR, e1, e2)) = 
-    result(fn r => era((gs "or"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "or")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.LSHIFT, e1, e2)) = 
-    result(fn r => era((gs "sllv"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "sllv")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.RSHIFT, e1, e2)) = 
-    result(fn r => era((gs "srlv"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "srlv")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.ARSHIFT, e1, e2)) = 
-    result(fn r => era((gs "srav"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "srav")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.XOR, e1, e2)) = 
-    result(fn r => era((gs "xor"), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => era((gs "xor")(0), [munchExp e1, munchExp e2], [r], NONE))
 
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
+    | munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2))
+    | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
+    era((gs "sw")(i), [munchExp e2], [munchExp e1], None)
 
 
   fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
