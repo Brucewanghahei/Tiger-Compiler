@@ -117,6 +117,28 @@ let
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
     result(fn r => era((Symbol.name n) ^ ":\n", [], [], NONE))
+
+    | munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
+  	           | (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
+      result(fn r => era(
+                        (gs "lw" i),
+                        [munchExp e1],
+                        [r],
+                        NONE
+            ))
+  	| munchExp (T.MEM(T.CONST i)) =
+      result(fn r => era(
+                        "lw $rt " ^ int i ^ "($r0)\n",
+			            [],
+			            [r],
+                        NONE))
+ 	| munchExp (T.MEM(e1)) =
+      result(fn r => era(
+                        (gs "lw" 0),
+                        [munchExp e1],
+                        [r],
+                        NONE
+            ))
     | munchExp (T.CALL(e, args)) =
       (
         era((gs "jalr"), munchExp(e)::munchArgs(0, args), calldefs, NONE);
@@ -173,8 +195,6 @@ let
 		emit(A.OPER{assem="",
 					src=[],
 					dst=[], jump=NONE})
-
-
 
   and munchArgs (i, []) = []
     | munchArgs (i, arg::tl) =
