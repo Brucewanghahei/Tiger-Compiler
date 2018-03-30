@@ -65,7 +65,7 @@ let
        => (fn (_) => oper ^ d)
        | ("jr" | "jalr" | "mthi" | "mtlo")
        => (fn (_) => oper ^ s)
-       | ("beq" | "bne")
+       | ("beq" | "bne" | "blt" | "ble" | "bgt" | "bge")
        => (fn lbl => oper ^ (sti lbl))
        | ("addi" | "addiu" | "slti" | "sltiu"
        | "andi" | "ori" | "xori")
