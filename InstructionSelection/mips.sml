@@ -49,7 +49,8 @@ let
     fun tis imm = " $rt, " ^ (imm) ^"($rs)\n"
     fun  si lbl = " $rs, " ^ (lbl) ^ "\n" 
     fun  ti imm = " $rt, " ^ (imm) ^ "\n"
-    fun a addr = " " ^ (addr) ^ "\n"
+    fun a addr  = " " ^ (addr) ^ "\n"
+    fun da addr = " $rd, " ^ addr  ^ "\n"
   in
     case oper of 
        ("sll" | "srl" | "sra")
@@ -79,6 +80,8 @@ let
        => (fn imm => oper ^ (ti imm))
        | ("j" | "jal")
        => (fn addr => oper ^ (a addr))
+       | ("la")
+       => (fn addr => oper ^ (da addr))
        | _
        => (fn (_) => "unmatched " ^ oper)
   end
@@ -168,6 +171,8 @@ let
     era("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
     era((gs "addi" (int i)) , [], [t], NONE)
+    | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
+    era(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
     era("add $rd $rs $zero\n" , [munchExp e2], [t], NONE)
   	| munchStm (T.LABEL lab) =
