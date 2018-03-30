@@ -23,8 +23,7 @@ struct
 		       
     type label = Symbol.symbol
 
-    fun compare(lhs, rhs) =
-        Int.compare(lhs, rhs)
+    val compare = Int.compare
     
     structure TempOrd =
     struct 
