@@ -36,7 +36,7 @@ let
       | T.UGE => "bge"
       
 
-  (* generate assembly *)
+  (* generote assembly *)
   fun gs oper =
   let
     fun dtsh shamt = " $rd, $rt, " ^ (shamt) ^ "\n"
@@ -87,66 +87,75 @@ let
   end
 
   (* emit wrapper on A.OPER *)
-  fun era (assem, src, dst, jump) =
+  fun ero (assem, src, dst, jump) =
     emit(A.OPER{assem=assem, src=src, dst=dst, jump=jump})
+
+  (* emit wrapper on A.LABEL *)
+  fun erl (assem, lab) =
+    emit(A.LABEL{assem=assem, lab=lab})
+
+  (* emit wrapper on A.MOVE *)
+  fun erm (assem, dst, src) =
+    emit(A.MOVE{assem=assem, dst=dst, src=src})
 
   fun munchExp ((T.BINOP(T.PLUS, e1, T.CONST(i)))
     | (T.BINOP(T.PLUS, T.CONST(i), e1))) =
-    result(fn r => era((gs "addi")(int i), [munchExp e1], [r], NONE))
+    result(fn r => ero((gs "addi")(int i), [munchExp e1], [r], NONE))
     | munchExp (T.BINOP(T.PLUS, e1, e2)) =
-    result(fn r => era((gs "add")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "add")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MINUS, e1, T.CONST(i))) =
-    result(fn r => era((gs "addi")(int (~i)), [munchExp e1], [r], NONE))
+    result(fn r => ero((gs "addi")(int (~i)), [munchExp e1], [r], NONE))
     | munchExp (T.BINOP(T.MINUS, e1, e2)) =
-    result(fn r => era((gs "sub")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "sub")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MUL, e1, e2)) =
-    result(fn r => era((gs "mul")(""), [munchExp e1, munchExp e2],
+    result(fn r => ero((gs "mul")(""), [munchExp e1, munchExp e2],
     [r], NONE))
     | munchExp (T.BINOP(T.DIV, e1, e2)) =
-    result(fn r => era(((gs "div")("") ^ (gs "mflo")("")), [munchExp e1, munchExp e2],
+    result(fn r => ero(((gs "div")("") ^ (gs "mflo")("")), [munchExp e1, munchExp e2],
     [r], NONE))
     | munchExp (T.BINOP(T.AND, e1, e2)) = 
-    result(fn r => era((gs "and")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "and")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.OR, e1, e2)) = 
-    result(fn r => era((gs "or")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "or")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.LSHIFT, e1, e2)) = 
-    result(fn r => era((gs "sllv")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "sllv")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.RSHIFT, e1, e2)) = 
-    result(fn r => era((gs "srlv")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "srlv")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.ARSHIFT, e1, e2)) = 
-    result(fn r => era((gs "srav")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "srav")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.XOR, e1, e2)) = 
-    result(fn r => era((gs "xor")(""), [munchExp e1, munchExp e2], [r], NONE))
+    result(fn r => ero((gs "xor")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.CONST i) =
-    result(fn r => era("addi $rd, $zero, " ^ (int i) ^ "\n", [], [r], NONE))
+    result(fn r => ero("addi $rd, $zero, " ^ (int i) ^ "\n", [], [r], NONE))
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
-    result(fn r => era((Symbol.name n) ^ ":\n", [], [], NONE))
+    result(fn r => ero((Symbol.name n) ^ ":\n", [], [], NONE))
 
     | munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
   	           | (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
-      result(fn r => era(
+      result(fn r => ero(
                         (gs "lw" (int i)),
                         [munchExp e1],
                         [r],
                         NONE
             ))
   	| munchExp (T.MEM(T.CONST i)) =
-      result(fn r => era(
+      result(fn r => ero(
                         "lw $rt " ^ int i ^ "($r0)\n",
 			            [],
 			            [r],
                         NONE))
  	| munchExp (T.MEM(e1)) =
-      result(fn r => era(
+      result(fn r => ero(
                         (gs "lw" ""),
                         [munchExp e1],
                         [r],
                         NONE
             ))
-    | munchExp (T.CALL(e, args)) =
+    | munchExp (T.CALL(T.NAME label, args)) =
       (
-        era((gs "jalr" ""), munchExp(e)::munchArgs(0, args), calldefs, NONE);
+        ero((gs "jal" (Symbol.name label)), munchArgs(0, args),
+        calldefs, SOME([label]));
         Frame.RV
       )
     (*
@@ -156,35 +165,30 @@ let
 
   and munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
     | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
-    era(gs (oper2jump (oper)) (Symbol.name l1), [munchExp e1, munchExp e2], [],
+    ero(gs (oper2jump (oper)) (Symbol.name l1), [munchExp e1, munchExp e2], [],
     SOME([l1, l2]))
     | munchStm (T.JUMP(T.NAME label, labelList)) =
-    era(gs "j" (Symbol.name label), [], [], SOME(labelList))
+    ero(gs "j" (Symbol.name label), [], [], SOME(labelList))
     | munchStm (T.JUMP(e1, labelList)) =
-    era(gs "jr" "", [munchExp e1], [], SOME(labelList))
+    ero(gs "jr" "", [munchExp e1], [], SOME(labelList))
     | munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2))
     | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
-    era((gs "sw")(int i), [munchExp e2], [], NONE)
+    ero((gs "sw")(int i), [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) =
-    era("sw $rt, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
+    ero("sw $rt, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
-    era("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
+    ero("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
-    era((gs "addi" (int i)) , [], [t], NONE)
+    ero((gs "addi" (int i)) , [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
-    era(gs "la" (Symbol.name n), [], [t], NONE)
+    ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
-    era("add $rd $rs $zero\n" , [munchExp e2], [t], NONE)
+    ero("add $rd $rs $zero\n" , [munchExp e2], [t], NONE)
   	| munchStm (T.LABEL lab) =
-    era((Symbol.name lab) ^ ":\n", [], [], NONE)
+    ero((Symbol.name lab) ^ ":\n", [], [], NONE)
     (* return value of call isn't needed *)
-    | munchStm (T.EXP(T.CALL(e, args))) =
-      era(
-          (gs "jalr" ""),
-          munchExp(e)::munchArgs(0, args),
-          calldefs,
-          NONE
-      )
+    | munchStm (T.EXP(e1)) =
+    ero("", [munchExp e1], [], NONE)
     | munchStm _ =
 		emit(A.OPER{assem="",
 					src=[],
