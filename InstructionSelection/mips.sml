@@ -5,7 +5,7 @@ structure T = Tree
 structure F = Frame
 structure A = Assem
 
-fun int x = Int.toString x
+fun int x = if x > 0 then Int.toString x else "-" ^ (Int.toString (~x))
 
 
 fun codegen (frame) (stm: Tree.stm) : Assem.instr list =
@@ -46,8 +46,8 @@ let
     fun sti imm = " $rs, $rt, " ^ (int imm) ^ "\n"
     fun tsi imm = " $rt, $rs, " ^ (int imm) ^ "\n"
     fun tis imm = " $rt, " ^ (int imm) ^"($rs)\n"
-    fun  si imm = " $rs, " ^ (int imm)
-    fun  ti imm = " $rt, " ^ (int imm)
+    fun  si imm = " $rs, " ^ (int imm) ^ "\n" 
+    fun  ti imm = " $rt, " ^ (int imm) ^ "\n"
     fun a addr = " " ^ (int addr) ^ "\n"
   in
     case oper of 
@@ -78,6 +78,8 @@ let
        => (fn imm => oper ^ (ti imm))
        | ("j" | "jal")
        => (fn addr => oper ^ (a addr))
+       | _
+       => (fn (_) => "unmatched " ^ oper)
   end
 
   (* emit wrapper on A.OPER *)
@@ -90,7 +92,7 @@ let
     | munchExp (T.BINOP(T.PLUS, e1, e2)) =
     result(fn r => era((gs "add")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MINUS, e1, T.CONST(i))) =
-    result(fn r => era((gs "subi")(i), [munchExp e1], [r], NONE))
+    result(fn r => era((gs "addi")(~i), [munchExp e1], [r], NONE))
     | munchExp (T.BINOP(T.MINUS, e1, e2)) =
     result(fn r => era((gs "sub")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MUL, e1, e2)) =
@@ -112,7 +114,7 @@ let
     | munchExp (T.BINOP(T.XOR, e1, e2)) = 
     result(fn r => era((gs "xor")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.CONST i) =
-    result(fn r => era("addi $rd, $zero, " ^ (int i), [], [r], NONE))
+    result(fn r => era("addi $rd, $zero, " ^ (int i) ^ "\n", [], [r], NONE))
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
     result(fn r => era((Symbol.name n) ^ ":\n", [], [], NONE))
@@ -160,9 +162,9 @@ let
     | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
     era((gs "sw")(i), [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) =
-    era("sw $rt, " ^ (int i) ^ "($zero)", [munchExp e2], [], NONE)
+    era("sw $rt, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
-    era("sw $rt, 0($rs)", [munchExp e2], [], NONE)
+    era("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP i, e2)) =
     era((gs "add")(0), [munchExp e2], [i], NONE)
   	| munchStm (T.LABEL lab) =
