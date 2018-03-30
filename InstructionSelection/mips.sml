@@ -129,7 +129,7 @@ let
     result(fn r => ero("addi $rd, $zero, " ^ (int i) ^ "\n", [], [r], NONE))
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
-    result(fn r => ero((Symbol.name n) ^ ":\n", [], [], NONE))
+    result(fn r => ero((gs "la" (Symbol.name n)), [], [], NONE))
 
     | munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
   	           | (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
@@ -183,14 +183,14 @@ let
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
     ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
-    ero("add $rd $rs $zero\n" , [munchExp e2], [t], NONE)
+    erm("add $rd $rs $zero\n" , munchExp e2, t)
   	| munchStm (T.LABEL lab) =
-    ero((Symbol.name lab) ^ ":\n", [], [], NONE)
+    erl((Symbol.name lab) ^ ":\n", lab)
     (* return value of call isn't needed *)
     | munchStm (T.EXP(e1)) =
     ero("", [munchExp e1], [], NONE)
     | munchStm _ =
-		emit(A.OPER{assem="",
+		emit(A.OPER{assem="non match\n",
 					src=[],
 					dst=[], jump=NONE})
 
