@@ -81,7 +81,7 @@ let
 
   (* emit wrapper on A.OPER *)
   fun era (assem, src, dst, jump) =
-    emit(A.OPER{assem=assem, src=src, dst=dst, jump})
+    emit(A.OPER{assem=assem, src=src, dst=dst, jump=jump})
 
   fun munchExp (T.BINOP(T.PLUS, e1, e2)) =
     result(fn r => era((gs "add"), [munchExp e1, munchExp e2], [r], NONE))
@@ -153,11 +153,12 @@ let
           dst=[], jump=SOME([label])})
     (* return value of call isn't needed *)
     | munchStm (T.EXP(T.CALL(e, args))) =
-      emit(A.OPER
-               {assem = "jalr 's0\n",
-                src = munchExp(e)::munchArgs(0, args),
-                dst = calldefs,
-                jump = NONE})
+      era(
+          (gs "jalr"),
+          munchExp(e)::munchArgs(0, args),
+          calldefs,
+          NONE
+      )
     | munchStm _ =
 		emit(A.OPER{assem="",
 					src=[],
@@ -203,11 +204,15 @@ let
         src=[],
         dst=[], jump=NONE}))
     | munchExp (T.CALL(e, args)) =
-      result(fn r => emit(A.OPER
-                              {assem = "jalr 's0\n",
-                               src = munchExp(e)::munchArgs(0, args),
-                               dst = calldefs,
-                               jump = NONE}))
+      (
+        result(fn r => era(
+                          (gs "jalr"),
+                          munchExp(e)::munchArgs(0, args),
+                          calldefs,
+                          NONE
+              ));
+        Frame.RV
+      )
     | munchExp (T.CALL(_, _)) = ErrorMsg.impossible "Function call exp format error"
       
     | munchExp (T.ESEQ(_, _)) = ErrorMsg.impossible "Error, ESEQ should not appear in Tree linearization"
