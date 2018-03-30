@@ -18,6 +18,7 @@ structure Main = struct
            val format0 = Assem.format(Temp.makestring)
        in
            TextIO.output(out,prolog);
+           app (fn i => Printtree.printtree(TextIO.stdOut, i)) stms';
            app (fn i => TextIO.output(out,format0 i)) instrs2;
            TextIO.output(out,epilog)
        end
@@ -32,14 +33,7 @@ structure Main = struct
    fun compile filename = 
        let val absyn = Parse.parse filename
            val frags = (FindEscape.prog absyn; Semant.transProg absyn)
-           val stm_list = map (fn frag =>
-           case frag of 
-             Translate.Frame.PROC {body=body, frame=frame} => body
-           | Translate.Frame.STRING (string_label, str) =>
-               Tree.LABEL(string_label)) frags
-           val pout = TextIO.stdOut
        in 
-           map (fn stm => Printtree.printtree(pout, stm)) stm_list;
            withOpenFile (filename ^ ".s") 
 	                    (fn out => (app (emitproc out) frags))
        end
