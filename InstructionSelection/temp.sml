@@ -1,4 +1,4 @@
-structure Temp :> TEMP =
+structure Temp : TEMP =
 struct
     type temp = int
 
@@ -22,19 +22,23 @@ struct
     fun makestring t = "t" ^ Int.toString t
 		       
     type label = Symbol.symbol
+    val compare = Int.compare
     
     structure TempOrd =
     struct 
       type ord_key = temp
       val compare = compare
     end
-
     structure Set = SplaySetFn(TempOrd)
     structure Map = SplayMapFn(TempOrd)
+
+    type 'a map = 'a Map.map
+    type set = Set.set
 			 
     fun newlabel() = 
 	let val x  = !labelCount
 	    val () = labelCount := x +1
+        val name = "L" ^ (Int.toString x)
 	in
 	    Symbol.symbol name
 	end

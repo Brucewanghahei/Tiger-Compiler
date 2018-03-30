@@ -1,5 +1,6 @@
 structure MipsFrame : FRAME =
 struct
+  structure A = Assem
   val wordSize = 4;
 
   (* k means the head of the shift (the next allocation position) *)
@@ -119,15 +120,15 @@ struct
       end
 
   fun procEntryExit2 (funFrame, bodyInstrs) =
-      bodyInstrs @ [A.OPER(assem = "",
+      bodyInstrs @ [A.OPER{assem = "",
                      src = [ZERO, RA, SP] @ calleesaveRegs,
                      dst = [],
-                     jump = SOME [])]
+                     jump = SOME []}]
 
-  fun procEntryExit3 (frame(name, params, k), bodyInstrs) =
+  fun procEntryExit3 (frame{name=name, formals=params, k=k}, bodyInstrs) =
       {
         prolog = "PROCEDURE " ^ Symbol.name name ^ "\n",
         body = bodyInstrs,
-        epilog = "END " & Symbol.name name "\n"
+        epilog = "END " ^ (Symbol.name name) ^ "\n"
       }
 end

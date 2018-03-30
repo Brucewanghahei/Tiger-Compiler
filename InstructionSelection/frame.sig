@@ -30,6 +30,6 @@ sig
   val procEntryExit2: frame * Assem.instr list -> Assem.instr list
   val procEntryExit3: frame * Assem.instr list ->
                       { prolog:string, body:Assem.instr list, epilog:string }
-  val tempMap: register Temp.Map
+  val tempMap: string Temp.map
   val temp2str: Temp.temp -> string
 end

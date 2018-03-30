@@ -110,6 +110,10 @@ let
     result(fn r => era((gs "srav")(0), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.XOR, e1, e2)) = 
     result(fn r => era((gs "xor")(0), [munchExp e1, munchExp e2], [r], NONE))
+    | munchExp (T.MEM(e1)) =
+    result(fn r => era((gs "lw")(0), [munchExp e1], [r], NONE))
+    | munchExp (T.CONST i) =
+    result(fn r => era("addi $rd, $zero, " ^ (int i)), [], [r], NONE)
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
     result(fn r => era((Symbol.name n) ^ ":\n", [], [], NONE))
@@ -126,7 +130,7 @@ let
 			 src=[],
 			 dst=[r], jump=NONE}))
 
-  fun munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
+  and munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
     | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
     result(fn r => era(gs (oper2jump (oper)), [munchExp e1, munchExp e2], [], SOME([trueLabel, falseLabel])))
     | munchStm (T.JUMP(e1, labelList)) =
@@ -171,38 +175,6 @@ let
 					dst=[], jump=NONE})
 
 
-  and munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
-  	| (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
-	   result(fn r => emit(A.OPER
-			 {assem="LOAD 'd0 <- M['s0+" ^ int i ^ "]\n",
-			 src=[munchExp e1],
-			 dst=[r], jump=NONE}))
-  	| munchExp (T.MEM(T.CONST i)) =
-        result(fn r => emit(A.OPER
-			 {assem="LOAD 'd0 <- M[r0+" ^ int i ^ "]\n",
-			 src=[],
-			 dst=[r], jump=NONE}))
- 	| munchExp (T.MEM(e1)) =
-	   result(fn r => emit(A.OPER
-			 {assem="LOAD 'd0 <- M['s0+0]\n",
-			 src=[munchExp e1],
-			 dst=[r], jump=NONE}))
-  	| munchExp ((T.BINOP(T.PLUS, e1, T.CONST i))
-  	| (T.BINOP(T.PLUS, T.CONST i, e1))) =
-	   result(fn r => emit(A.OPER
-			 {assem="ADDI 'd0 <- 's0+" ^ int i ^ "\n",
-			 src=[munchExp e1],
-			 dst=[r], jump=NONE}))
-  	| munchExp (T.CONST i) =
-	   result(fn r => emit(A.OPER
-			 {assem="ADDI 'd0 <- r0+" ^ int i ^ "\n",
-			 src=[],
-			 dst=[r], jump=NONE}))
-  	| munchExp (T.BINOP(T.PLUS, e1, e2)) =
-	   result(fn r => emit(A.OPER
-			 {assem="ADD 'd0 <- 's0+'s1\n",
-			 src=[munchExp e1, munchExp e2],
-			 dst=[r], jump=NONE}))
 
   and munchArgs (i, []) = []
     | munchArgs (i, arg::tl) =
