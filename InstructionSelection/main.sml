@@ -20,6 +20,7 @@ structure Main = struct
            TextIO.output(out,prolog);
            app (fn i => Printtree.printtree(TextIO.stdOut, i)) stms';
            app (fn i => TextIO.output(out,format0 i)) instrs2;
+           app (fn i => TextIO.output(TextIO.stdOut,format0 i)) instrs2;
            TextIO.output(out,epilog)
        end
      | emitproc out (F.STRING(lab,s)) = TextIO.output(out,F.string(lab,s))
