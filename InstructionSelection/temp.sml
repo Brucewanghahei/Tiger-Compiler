@@ -22,6 +22,9 @@ struct
     fun makestring t = "t" ^ Int.toString t
 		       
     type label = Symbol.symbol
+
+    fun compare(lhs, rhs) =
+        Int.compare(lhs, rhs)
     
     structure TempOrd =
     struct 
