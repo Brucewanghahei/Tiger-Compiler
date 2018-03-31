@@ -1,38 +1,13 @@
-Translating to IR
+Instruction Selection
 ---
 
-This is the fancy part of the compiler ... I mean you can do a lot of fancy work here (and later phases) if you have time
+## T.CALL
+First 4 parameters of a function call is saved in `a0` - `a3`(static link, the implicit first parameter is not counted). The rest is pushed into the stack(frame).
 
-Test
----
-You can run "Main.compile <filename>" to get the result. For this phase, you will see the type checking errors (if exists) and the IR tree.
+# Frame
+## Registers
+We add all registers that will be used in Mips in `mipsframe.sml` and implement a `map` to provide mappings `reg -> reg_name`.
+## procEntryExit
+In a function call, registers that needs to be used later by the caller should be saved. So an instruction that declares these registers as `src` is prepended to the function body in `procEntryExit2`.
 
-For example:
-```
-val it = true : bool
- = SEQ(
-  LABEL tiger_main,
-  MOVE(
-   TEMP t101,
-   ESEQ(
-    EXP(
-     CONST 0),
-    CONST 1)))
- val it = [()] : unit list
-```
-
-We also implement a test.sh to automate the test.
-
-What we implement
----
-
-## Function & View Shift
-### procEntryExit
-As the number of variables that should be stored in the frame/registers cannot be known until `reg alloc` phase,
-we only put the label and the body of the function in the `fragment` for it. So only procEntryExit1 is implemented in this phase.
-`procEntryExit2` and `procEntryExit3` which handle the stack/frame pointer and the callee save/restore of `view shift` will be implemented later.
-
-
-# FindEscape
-We implemented the findescape feature (maybe not ready to launch at this phase ... but the codes are there)
-
+As we don't know about register allocation in this phase, `procEntryExit3` is implemented as a scaffold.
