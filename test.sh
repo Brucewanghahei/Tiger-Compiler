@@ -12,5 +12,5 @@ cmd_teml='CM.make "sources.cm"; Main.compile "../testcases/'
 seq 1 49 | xargs -I {} -P 4 bash -c  \
                  "cd $src_dir; echo '${cmd_teml}test{}.tig\";' | sml | sed -n '/\\[New bindings added\\.\\]/,\$p' > ../${log_dir}/{}.log"
 
-echo 'merge\nqueens' | xargs -I {} -P 4 bash -c  \
+printf 'merge\nqueens' | xargs -I {} -P 4 bash -c  \
                  "cd $src_dir; echo '${cmd_teml}{}.tig\";' | sml | sed -n '/\\[New bindings added\\.\\]/,\$p' > ../${log_dir}/{}.log"

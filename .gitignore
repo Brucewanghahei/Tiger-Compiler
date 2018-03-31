@@ -1,6 +1,7 @@
 .cm/
 \#*\#
 *.zip
+*.s
 LexAnalysis/tiger.lex.sml 
 tiger.grm.*
 test-results*/
