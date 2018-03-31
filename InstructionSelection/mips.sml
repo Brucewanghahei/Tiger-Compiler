@@ -80,7 +80,7 @@ let
        => (fn imm => oper ^ (ti imm))
        | ("j" | "jal")
        => (fn addr => oper ^ (a addr))
-       | ("la")
+       | ("la" | "li")
        => (fn addr => oper ^ (da addr))
        | _
        => (fn (_) => "unmatched " ^ oper)
@@ -126,7 +126,7 @@ let
     | munchExp (T.BINOP(T.XOR, e1, e2)) = 
     result(fn r => ero((gs "xor")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.CONST i) =
-    result(fn r => ero("addi $rd, $zero, " ^ (int i) ^ "\n", [], [r], NONE))
+    result(fn r => ero((gs "li" (int i)), [], [r], NONE))
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
     result(fn r => ero((gs "la" (Symbol.name n)), [], [], NONE))
@@ -141,13 +141,13 @@ let
             ))
   	| munchExp (T.MEM(T.CONST i)) =
       result(fn r => ero(
-                        "lw $rt " ^ int i ^ "($r0)\n",
+                        "lw $rt " ^ int i ^ "($zero)\n",
 			            [],
 			            [r],
                         NONE))
  	| munchExp (T.MEM(e1)) =
       result(fn r => ero(
-                        (gs "lw" ""),
+                        (gs "lw" "0"),
                         [munchExp e1],
                         [r],
                         NONE
@@ -162,6 +162,7 @@ let
     | munchExp (T.CALL(_, _)) = ErrorMsg.impossible "Function call exp format error"
     *)
     | munchExp (T.ESEQ(_, _)) = ErrorMsg.impossible "Error, ESEQ should not appear in Tree linearization"
+    | munchExp (_) = ErrorMsg.impossible "Unknown munchExp"
 
   and munchStm (T.SEQ(a,b)) = (munchStm a; munchStm b)
     | munchStm (T.CJUMP(oper, e1, e2, l1, l2)) =
@@ -179,7 +180,7 @@ let
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
     ero("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
-    ero((gs "addi" (int i)) , [], [t], NONE)
+    ero((gs "li" (int i)) , [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
     ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
