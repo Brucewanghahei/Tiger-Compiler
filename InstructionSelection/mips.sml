@@ -55,7 +55,7 @@ let
     case oper of 
        ("sll" | "srl" | "sra")
        => (fn shamt => oper ^ (dtsh shamt))
-       | ("add" | "addu" | "sub" | "subu" 
+       | ("add" | "addu" | "sub" | "subu" | "mul"
        | "and" | "or" | "xor" | "nor"
        | "slt" | "sltu"
        | "sllv" | "srlv" | "srav")
@@ -181,8 +181,8 @@ let
     ero("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
     ero((gs "li" (int i)) , [], [t], NONE)
-    | munchStm (T.MOVE(T.TEMP t1, T.BINOP(T.PLUS, T.TEMP t2, T.CONST i))) =
-    ero((gs "addi" (int i)), [t2], [t1], NONE)
+    | munchStm (T.MOVE(T.TEMP t, T.BINOP(T.PLUS, T.CONST i, e1))) =
+    ero((gs "addi" (int i)), [munchExp e1], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
     ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
