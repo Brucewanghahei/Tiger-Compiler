@@ -11,6 +11,13 @@ structure F = Flow
 structure G = F.Graph
 structure T = Temp
 
+(* node info:
+ * {
+ * def: Temp.temp list,
+ * use: Temp.temp list,
+ * move: Temp.temp Option (* SOME src *)
+ * }
+ *)
 fun instrs2graph instrs =
     let
         (* first pass:
