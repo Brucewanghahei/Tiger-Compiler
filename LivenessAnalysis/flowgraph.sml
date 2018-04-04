@@ -1,9 +1,11 @@
 structure Flow =
 struct
 
+type nodeID = int
+
 structure NodeOrd =
 struct
-type org_key = int
+type ord_key = nodeID
 val compare = Int.compare
 end
 
