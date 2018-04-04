@@ -11,10 +11,7 @@ end
 
 structure Graph = FuncGraph(NodeOrd)
 
-datatype flowgraph = FGRAPH of {control: Graph.graph,
-				                def: Temp.temp list Graph.Table.table,
-				                use: Temp.temp list Graph.Table.table,
-				                ismove: bool Graph.Table.table}
+datatype flowgraph = FGRAPH of {control: Graph.graph}
 
 (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
         of the same variable.  If there is a def(x) followed by use(x)
@@ -26,9 +23,8 @@ datatype flowgraph = FGRAPH of {control: Graph.graph,
        If there are any nonzero number of uses BEFORE THE FIRST DEF,
            mention use(x).
 
-     For any node in the graph,  
-           Graph.Table.look(def,node) = SOME(def-list)
-           Graph.Table.look(use,node) = SOME(use-list)
+    Data of nodes are stored in the graph
+
  *)
 
 end
