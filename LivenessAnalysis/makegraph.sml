@@ -25,7 +25,7 @@ fun instrs2graph instrs =
          * return all jump instrs and label instrs with their nodes
          *)
         fun sequentialScan instrs: A.instr list
-                                   -> G.graph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
+                                   -> F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
                 fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, use)) =
                     let val (dstOpt, srcOpt, jumpOpt, labelOpt) =
