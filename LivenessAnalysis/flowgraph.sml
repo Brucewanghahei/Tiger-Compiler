@@ -11,7 +11,7 @@ end
 
 structure Graph = FuncGraph(NodeOrd)
 
-datatype flowgraph = FGRAPH of {control: Graph.graph}
+datatype flowgraph = Graph.graph
 
 (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
         of the same variable.  If there is a def(x) followed by use(x)

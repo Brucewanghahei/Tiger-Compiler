@@ -1,7 +1,6 @@
 structure MakeGraph:
           sig
-              val instrs2graph: Assem.instr list ->
-                                Flow.flowgraph * Flow.Graph.node list
+              val instrs2graph: Assem.instr list -> Flow.flowgraph
           end
 =
 struct
@@ -26,7 +25,7 @@ fun instrs2graph instrs =
          * return all jump instrs and label instrs with their nodes
          *)
         fun sequentialScan instrs: A.instr list
-                                   -> G * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
+                                   -> G.graph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
                 fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, use)) =
                     let val (dstOpt, srcOpt, jumpOpt, labelOpt) =
