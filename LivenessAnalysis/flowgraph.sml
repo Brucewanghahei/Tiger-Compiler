@@ -11,7 +11,12 @@ end
 
 structure Graph = FuncGraph(NodeOrd)
 
-datatype flowgraph = Graph.graph
+datatype flowgraph =
+         {
+           def: Temp.temp list,
+           use: Temp.temp list,
+           move: Temp.temp option
+         } Graph.graph
 
 (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
         of the same variable.  If there is a def(x) followed by use(x)
