@@ -15,7 +15,7 @@ datatype flowgraph =
          {
            def: Temp.temp list,
            use: Temp.temp list,
-           move: Temp.temp option
+           move: (Temp.temp * Temp.temp) option
          } Graph.graph
 
 (* Note:  any "use" within the block is assumed to be BEFORE a "def" 

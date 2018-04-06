@@ -33,7 +33,7 @@ fun instrs2graph instrs =
                                         | A.LABEL{lab, ...} => (NONE, NONE, NONE, SOME lab, false)
                                         | A.MOVE{dst, src, ...} => (NONE, NONE, SOME [dst], SOME [src], false)
                         val moveOpt = if isMove then
-                                        case srcOpt of SOME (src::tl) => SOME src
+                                        case (dstOpt, srcOpt) of (SOME (dst::tl), SOME (src::tl)) => SOME (dst, src)
                                                      | _ => ErrorMsg.impossible "Error when extracting A.MOVE"
                                       else NONE
                         val def' = case dstOpt of
