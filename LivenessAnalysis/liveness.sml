@@ -57,16 +57,31 @@ structure Liveness: LIVENESS = struct
     end
   in
   end
+  
+  structure tSet = Temp.Set
+  structure tMap = Temp.Map
 
   fun interferenceGraph (flow: Flow.flowgraph) = 
-  let
-    val livegraph = flow2liveGarph(flow)
-
-    fun transLive2Inter =
+    let
+      val lGraph = flow2liveGarph(flow)
+      val (iGraph, tMap, moves) = LGraph2IGraph lGraph
+      fun tnode x = Graph.getNode(iGraph, lookNidM tMap x)
+      fun gtemp x = Graph.nodeInfo(x)
+      val moves =
+        let
+          fun isSame({from=f1, to=t1}, {from=f2, to=t2}) =
+            if (f1=f2 andalso t1=t2) oralso (f1=t2 andalso f2=t1) then true else false
+          fun hasEdge(e, []) = false
+            | hasEdge(e, h::l) = if isSame(e, h) then true else hasEdge(e, l)
+        in
+          
+        end
+    in
+      (IGRAPH{graph=iGraph, tnode=tnode, gtemp=gtemp, moves=moves}, liveOutFunc)
+    end
+  and fun LGraph2IGraph lgraph =
     let
     in
     end
-  in
-  end
     
 end
