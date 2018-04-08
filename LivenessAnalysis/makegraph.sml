@@ -10,6 +10,9 @@ structure F = Flow
 structure G = F.Graph
 structure T = Temp
 
+type node = {def: Temp.temp list, use: Temp.temp list, 
+             move: (Temp.temp * Temp.temp) option}
+
 (* node info:
  * {
  * def: Temp.temp list,
@@ -55,7 +58,7 @@ fun instrs2graph instrs =
                                                        })
                         (* connect adjacent instrs if current instr doesn't jump *)
                         val graph'' = if id = 0 orelse isSome jumpOpt then graph'
-                                      else G.addEdge(graph', {from = id - 1, to = id}),
+                                      else G.addEdge(graph', {from = id - 1, to = id})
 
                     in
                     (

@@ -1,25 +1,50 @@
 structure Liveness: LIVENESS = struct
 
-  type liveSet = unit Temp.Table.table * temp list
-  type liveMap = liveSet FlowGraph.Table.table
-
+  structure Graph = Flow.Graph
+  structure FGraph = Flow.Graph
   structure IGraph = Flow.Graph
   structure LiveGraph = Flow.Graph
   structure tSet = Temp.Set
   structure tMap = Temp.Map
+
+
+  type t_tset = Temp.Set.set
+  type t_lnode = {def: t_tset, use: t_tset, 
+                  move: (Temp.temp * Temp.temp) option,
+                  li: t_tset, lo: t_tset}
+  type t_inode = Temp.temp Graph.node
+  type t_igraph = Temp.temp Graph.graph
+
+  type t_lgraph = t_lnode Graph.graph
+
+  type t_tset = Temp.Set.set
+  type t_lnode = {def: t_tset, use: t_tset, 
+                  move: (Temp.temp * Temp.temp) option,
+                  li: t_tset, lo: t_tset}
+  type t_inode = Temp.temp Graph.node
+  type t_igraph = Temp.temp Graph.graph
+
+  type t_lgraph = t_lnode Graph.graph
+
+  datatype igraph = IGRAPH of {graph: t_igraph,
+                               tnode: Temp.temp -> t_inode,
+                               gtemp: t_inode -> Temp.temp,
+                              moves: (t_inode * t_inode) list}
 
   fun list2set lst =
     foldl (fn (item, set) => tSet.add(set, item)) tSet.empty lst
 
   fun flow2liveGraph (flow: Flow.flowgraph) =
   let
+    type t_fnode = Flow.t_node FGraph.node
     fun transFlow2Live () = 
     let
       (* Firstly, copy the original flow graph *)
       (* Only nodes copied, edges remain uncopied *)
-      fun init (flownode, livegraph) =
+      fun init (flownode: t_fnode, livegraph) =
       let
-        val (nid, attrs, _, _) = flownode
+        val nid = FGraph.getNodeID(flownode)
+        val attrs = FGraph.nodeInfo(flownode)
         val {def=def, use=use, move=move} = attrs
         val def = list2set def
         val use = list2set use
@@ -31,46 +56,54 @@ structure Liveness: LIVENESS = struct
 
       val initgraph = LiveGraph.foldNodes init LiveGraph.empty flow
 
+      (*
       (* Second, copy the edges *)
       (* lg: livegraph *)
       fun trans (lg_old_node, lg_new) =
       let
-        val (nid, old_attrs, old_succs, old_preds) = lg_old_node
+        val nid = LiveGraph.getNodeID(lg_old_node)
+        val old_attrs = LiveGraph.nodeInfo(lg_old_node)
+        val old_succs = LiveGraph.succs(lg_old_node)
+        val old_preds = LiveGraph.preds(lg_old_node)
         val lg_new_node = LiveGraph.getNode(lg_new, nid)
-        val (_, new_attrs, _, _) = lg_new_node
-        fun remap node_set = LiveGraph.NodeSet.map (fn (nid, _, _, _) =>
+        val new_attrs = LiveGraph.nodeInfo(lg_new_node)
+        fun remap node_set = LiveGraph.NodeSet.map (fn nid =>
           LiveGraph.getNode(lg_new, nid)) node_set
         val new_succs = remap old_succs
         val new_preds = remap old_preds
       in
         LiveGraph.NodeMap.insert(lg_new, nid, (nid, new_attrs, new_succs,
         new_preds))
-      =end
+      end
 
       val transgraph = LiveGraph.foldNodes trans flow initgraph
+      *)
+      val transgraph = initgraph
 
       (* Third, recursively calculate the liveness *)
       fun liveiterate () = 
       let
         fun update nid graph =
         let
-          val (nid, attrs, succs, preds) = LiveGraph.getNode(graph, nid)
+          val node = LiveGraph.getNode(graph, nid)
+          val attrs = LiveGraph.nodeInfo(node)
+          val succs = LiveGraph.succs(node)
+          val preds = LiveGraph.preds(node)
           val {def=def, use=use, move=move, li=old_li, lo=old_lo} = attrs
           val new_li = tSet.union(use, (tSet.difference(old_lo, def)))
           val new_lo = foldl (
             fn (nid, set) => 
             let
-              val (_, {def=_, use=_, move=_, li=li, lo=_}, _, _) =
-                LiveGraph.getNode(graph, nid);
+              val n = LiveGraph.getNode(graph, nid)
+              val li = #li (LiveGraph.nodeInfo node)
             in
               tSet.union(set, li)
             end
           ) tSet.empty succs
           val is_stable = ((tSet.compare(old_lo, new_lo) = EQUAL) andalso 
-                           (tSet.compare(old_in, new_in) = EQUAL))
-          val new_graph = LiveGraph.addNode(graph,
-            (nid, {def=def, use=use, move=move, li=new_li, lo=new_lo}, succs,
-            preds))
+                           (tSet.compare(old_li, new_li) = EQUAL))
+          val d = {def=def, use=use, move=move, li=new_li, lo=new_lo}
+          val new_graph = LiveGraph.changeNodeData(graph, nid, d) 
         in
           (is_stable, new_graph)
         end
@@ -80,7 +113,7 @@ structure Liveness: LIVENESS = struct
           val iterated = 
           LiveGraph.foldNodes (fn (node, (is_stable, graph)) =>
           let
-            val (nid, _, _, _) = node
+            val nid = LiveGraph.getNodeID(node)
             val (new_stable, new_graph) = update nid graph
           in
             (is_stable andalso new_stable, new_graph)
@@ -99,11 +132,12 @@ structure Liveness: LIVENESS = struct
   in
     transFlow2Live()
   end
-  
+ 
+  exception NidNotFound
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
-      val lGraph = flow2liveGarph(flow)
-      val (iGraph, tMap, mEdges) = LGraph2IGraph lGraph
+      val lGraph = flow2liveGraph(flow)
+      val (iGraph, tMap, mEdges ) = LGraph2IGraph lGraph
       fun tnode x = Flow.Graph.getNode (iGraph, lookNid tMap x)
       fun gtemp x = Flow.Graph.nodeInfo(x)
       val mEdges =
@@ -123,18 +157,15 @@ structure Liveness: LIVENESS = struct
         moves=mEdges
       }
     end
-  and LGOAraph2IGraph lgraph =
+  and LGraph2IGraph lgraph =
     let
     in
       ()
     end
-
-  exception NidNotFound
-  fun lookNid tMap x =
-    case TMap.find (tMap, x) of
+  and lookNid tMap x =
+    case tMap.find (tMap, x) of
       SOME(nid) => nid
       | _ => raise NidNotFound
-    
 end
     
 

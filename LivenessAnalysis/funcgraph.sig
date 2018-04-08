@@ -5,6 +5,9 @@ type 'a node
 type 'a edge = {from: nodeID, to: nodeID}
 type 'a graph
 
+structure NodeSet: ORD_SET
+structure NodeMap: ORD_MAP
+
 exception NoSuchNode of nodeID
 exception NoSuchEdge of nodeID * nodeID
 
