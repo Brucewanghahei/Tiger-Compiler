@@ -58,30 +58,41 @@ structure Liveness: LIVENESS = struct
   in
   end
   
-  structure tSet = Temp.Set
-  structure tMap = Temp.Map
-
+  struct TSet = Temp.Set
+  struct TMap = Temp.Map
+  
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
       val lGraph = flow2liveGarph(flow)
-      val (iGraph, tMap, moves) = LGraph2IGraph lGraph
-      fun tnode x = Graph.getNode(iGraph, lookNidM tMap x)
-      fun gtemp x = Graph.nodeInfo(x)
-      val moves =
+      val (iGraph, tMap, mEdges) = LGraph2IGraph lGraph
+      fun tnode x = Flow.Graph.getNode (iGraph, lookNid tMap x)
+      fun gtemp x = Flow.Graph.nodeInfo(x)
+      val mEdges =
         let
           fun isSame({from=f1, to=t1}, {from=f2, to=t2}) =
             if (f1=f2 andalso t1=t2) oralso (f1=t2 andalso f2=t1) then true else false
           fun hasEdge(e, []) = false
             | hasEdge(e, h::l) = if isSame(e, h) then true else hasEdge(e, l)
         in
-          
+          foldl (fn (e, eList) => if hasEdge(e, eList) then eList else e::eList) [] mEdges
         end
     in
-      (IGRAPH{graph=iGraph, tnode=tnode, gtemp=gtemp, moves=moves}, liveOutFunc)
+      IGRAPH{
+        graph=iGraph
+        tnode=tnode
+        gtemp=gtemp
+        moves=mEdges
+      }
     end
   and fun LGraph2IGraph lgraph =
     let
     in
     end
+  
+  exception NidNotFound
+  fun lookNid tMap x =
+    case TMap.find (tMap, x) of
+      SOME(nid) => nid
+      | _ => raise NidNotFound
     
 end
