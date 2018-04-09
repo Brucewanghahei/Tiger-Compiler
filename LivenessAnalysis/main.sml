@@ -5,6 +5,7 @@ structure Main = struct
    (* structure R = RegAlloc *)
 
    fun getsome (SOME x) = x
+     | getsome NONE = ErrorMsg.impossible "Fail to get value from option"
 
    fun emitproc out (F.PROC{body,frame}) =
        let val _ = print ("emit " ^ (Symbol.name (F.name frame)) ^ "\n")
