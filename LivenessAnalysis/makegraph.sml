@@ -11,11 +11,8 @@ structure G = F.Graph
 structure T = Temp
 
 
-(* move: (dst * src) Option
- * case SOME _ => dst->src is a move edge
- * | NONE => no move edge  *)
-type node = {def: Temp.temp list, use: Temp.temp list, 
-             move: (Temp.temp * Temp.temp) option}
+(* type node = {def: Temp.temp list, use: Temp.temp list,  *)
+(*              move: (Temp.temp * Temp.temp) option} *)
 
 (* infix op have to be declared in every module *)
 infixr 3 </ fun x </ f = f x (* Right application *)
@@ -35,7 +32,7 @@ fun instrs2graph instrs =
                     let val (dstOpt, srcOpt, jumpOpt, labelOpt, isMove) =
                             case instr of A.OPER{dst, src, jump, ...} => (SOME dst, SOME src, jump, NONE, false)
                                         | A.LABEL{lab, ...} => (NONE, NONE, NONE, SOME lab, false)
-                                        | A.MOVE{dst, src, ...} => (NONE, NONE, SOME [dst], SOME [src], false)
+                                        | A.MOVE{dst, src, ...} => (SOME [dst], SOME [src], NONE, NONE, true)
                         val moveOpt = if isMove then
                                         case (dstOpt, srcOpt) of (SOME (dst::_), SOME (src::_)) => SOME (dst, src)
                                                      | _ => ErrorMsg.impossible "Error when extracting A.MOVE"
@@ -51,7 +48,7 @@ fun instrs2graph instrs =
                                                                  | NONE => true)
                                                       src)@use
                                     | NONE => use
-                        val (graph', node) = G.addNode(graph, id,
+                        val (graph', node) = G.addNode'(graph, id,
                                                        {
                                                            def=def,
                                                            use=use,
@@ -64,10 +61,10 @@ fun instrs2graph instrs =
                     in
                     (
                       id + 1,
+                      graph'',
                       case jumpOpt of
                           SOME jumps => (jumps, id)::jumpsNodes
                         | NONE => jumpsNodes,
-                      graph'',
                       case labelOpt of
                           SOME label => (label, id)::labelNodes
                         | NONE => labelNodes,
