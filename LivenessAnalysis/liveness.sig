@@ -3,6 +3,7 @@ sig
   structure LiveGraph : FUNCGRAPH
   structure IGraph : FUNCGRAPH
   structure Graph: FUNCGRAPH
+  structure tSet: ORD_SET
 
   type t_tset = Temp.Set.set
   type t_lnode = {def: t_tset, use: t_tset, 
@@ -22,4 +23,5 @@ sig
   val flow2liveGraph : Flow.flowgraph -> t_lgraph
 
   val show : TextIO.outstream * igraph -> unit
+  val showlive: t_lgraph -> unit
 end
