@@ -16,16 +16,7 @@ structure Liveness: LIVENESS = struct
   type t_igraph = Temp.temp Graph.graph
 
   type t_lgraph = t_lnode Graph.graph
-
-  type t_tset = Temp.Set.set
-  type t_lnode = {def: t_tset, use: t_tset, 
-                  move: (Temp.temp * Temp.temp) option,
-                  li: t_tset, lo: t_tset}
-  type t_inode = Temp.temp Graph.node
-  type t_igraph = Temp.temp Graph.graph
-
-  type t_lgraph = t_lnode Graph.graph
-
+  
   datatype igraph = IGRAPH of {graph: t_igraph,
                                tnode: Temp.temp -> t_inode,
                                gtemp: t_inode -> Temp.temp,
@@ -168,6 +159,14 @@ structure Liveness: LIVENESS = struct
       SOME(nid) => nid
       | _ => raise NidNotFound
   *)
+  fun ts2s set = tSet.foldl (fn (item,
+     s) => s ^ " " ^ (Int.toString item)) "" set
+  fun showlive livegraph = (
+     print("Live Graph\n");
+     Graph.printGraph (fn (nid, {def=def, use=use, move=move,
+     li=li, lo=lo}:t_lnode) => (Int.toString nid) ^ 
+     "\nlive out: " ^ (ts2s lo) ^
+     "\nlive in: " ^ (ts2s li)) livegraph)
 end
     
 

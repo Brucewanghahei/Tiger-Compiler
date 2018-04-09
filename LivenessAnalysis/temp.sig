@@ -12,5 +12,6 @@ sig
   structure Map : ORD_MAP sharing type Map.Key.ord_key = temp
   type 'a map
   type set
+  val tl2s: temp list -> string
 end
 
