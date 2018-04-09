@@ -210,7 +210,7 @@ structure Liveness: LIVENESS = struct
       SOME(nid) => nid
       | _ => raise NidNotFound
   
-  fun ts2s set = tSet.foldl (fn (item,
+  fun ts2s set = TSet.foldl (fn (item,
      s) => s ^ " " ^ (Int.toString item)) "" set
   fun showlive livegraph = (
      print("Live Graph\n");
