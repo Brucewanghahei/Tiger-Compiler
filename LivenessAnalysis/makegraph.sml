@@ -10,16 +10,14 @@ structure F = Flow
 structure G = F.Graph
 structure T = Temp
 
-type node = {def: Temp.temp list, use: Temp.temp list, 
-             move: (Temp.temp * Temp.temp) option}
 
-(* node info:
- * {
- * def: Temp.temp list,
- * use: Temp.temp list,
- * move: Temp.temp Option (* SOME src *)
- * }
- *)
+(* type node = {def: Temp.temp list, use: Temp.temp list,  *)
+(*              move: (Temp.temp * Temp.temp) option} *)
+
+(* infix op have to be declared in every module *)
+infixr 3 </ fun x </ f = f x (* Right application *)
+infix 1 >/ val op>/ = op</ (* Left pipe *)
+
 fun instrs2graph instrs =
     let
         (* first pass:
@@ -27,16 +25,16 @@ fun instrs2graph instrs =
          * connect adjacent nodes of instrs which don't jump
          * return all jump instrs and label instrs with their nodes
          *)
-        fun sequentialScan instrs: A.instr list
-                                   -> F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
+        fun sequentialScan (instrs: A.instr list):
+                                    F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
                 fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, use)) =
-                    let val (dstOpt, srcOpt, jumpOpt, labelOpt) =
+                    let val (dstOpt, srcOpt, jumpOpt, labelOpt, isMove) =
                             case instr of A.OPER{dst, src, jump, ...} => (SOME dst, SOME src, jump, NONE, false)
                                         | A.LABEL{lab, ...} => (NONE, NONE, NONE, SOME lab, false)
-                                        | A.MOVE{dst, src, ...} => (NONE, NONE, SOME [dst], SOME [src], false)
+                                        | A.MOVE{dst, src, ...} => (SOME [dst], SOME [src], NONE, NONE, true)
                         val moveOpt = if isMove then
-                                        case (dstOpt, srcOpt) of (SOME (dst::tl), SOME (src::tl)) => SOME (dst, src)
+                                        case (dstOpt, srcOpt) of (SOME (dst::_), SOME (src::_)) => SOME (dst, src)
                                                      | _ => ErrorMsg.impossible "Error when extracting A.MOVE"
                                       else NONE
                         val def' = case dstOpt of
@@ -50,7 +48,7 @@ fun instrs2graph instrs =
                                                                  | NONE => true)
                                                       src)@use
                                     | NONE => use
-                        val (graph', node) = G.addNode(graph, id,
+                        val (graph', node) = G.addNode'(graph, id,
                                                        {
                                                            def=def,
                                                            use=use,
@@ -63,10 +61,10 @@ fun instrs2graph instrs =
                     in
                     (
                       id + 1,
+                      graph'',
                       case jumpOpt of
                           SOME jumps => (jumps, id)::jumpsNodes
                         | NONE => jumpsNodes,
-                      graph'',
                       case labelOpt of
                           SOME label => (label, id)::labelNodes
                         | NONE => labelNodes,
@@ -83,7 +81,7 @@ fun instrs2graph instrs =
          * find label of nodes for each jump label and connect jump nodes with label nodes
          *)
         fun makeJumps (graph, jumpsNodes, labelNodes) =
-            let fun addJumpEdges (jumps, from) =
+            let fun addJumpEdges ((jumps, from), graph) =
                     foldl (fn (jump, graph) => 
                               labelNodes >/ List.filter (fn (label, _) => label = jump)
                                          >/ map #2

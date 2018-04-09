@@ -11,6 +11,9 @@ end
 
 structure Graph = FuncGraph(NodeOrd)
 
+(* move: (dst * src) Option
+ * case SOME _ => dst->src is a move edge
+ * | NONE => no move edge  *)
 type t_node = {def: Temp.temp list, use: Temp.temp list, 
              move: (Temp.temp * Temp.temp) option}
 type flowgraph = t_node Graph.graph
