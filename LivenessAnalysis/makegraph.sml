@@ -25,8 +25,8 @@ fun instrs2graph instrs =
          * connect adjacent nodes of instrs which don't jump
          * return all jump instrs and label instrs with their nodes
          *)
-        fun sequentialScan instrs: A.instr list
-                                   -> F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
+        fun sequentialScan (instrs: A.instr list):
+                                    F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
                 fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, use)) =
                     let val (dstOpt, srcOpt, jumpOpt, labelOpt, isMove) =
@@ -81,7 +81,7 @@ fun instrs2graph instrs =
          * find label of nodes for each jump label and connect jump nodes with label nodes
          *)
         fun makeJumps (graph, jumpsNodes, labelNodes) =
-            let fun addJumpEdges (jumps, from) =
+            let fun addJumpEdges ((jumps, from), graph) =
                     foldl (fn (jump, graph) => 
                               labelNodes >/ List.filter (fn (label, _) => label = jump)
                                          >/ map #2
