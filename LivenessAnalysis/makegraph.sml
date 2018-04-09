@@ -10,16 +10,17 @@ structure F = Flow
 structure G = F.Graph
 structure T = Temp
 
+
+(* move: (dst * src) Option
+ * case SOME _ => dst->src is a move edge
+ * | NONE => no move edge  *)
 type node = {def: Temp.temp list, use: Temp.temp list, 
              move: (Temp.temp * Temp.temp) option}
 
-(* node info:
- * {
- * def: Temp.temp list,
- * use: Temp.temp list,
- * move: Temp.temp Option (* SOME src *)
- * }
- *)
+(* infix op have to be declared in every module *)
+infixr 3 </ fun x </ f = f x (* Right application *)
+infix 1 >/ val op>/ = op</ (* Left pipe *)
+
 fun instrs2graph instrs =
     let
         (* first pass:
@@ -31,12 +32,12 @@ fun instrs2graph instrs =
                                    -> F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
                 fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, use)) =
-                    let val (dstOpt, srcOpt, jumpOpt, labelOpt) =
+                    let val (dstOpt, srcOpt, jumpOpt, labelOpt, isMove) =
                             case instr of A.OPER{dst, src, jump, ...} => (SOME dst, SOME src, jump, NONE, false)
                                         | A.LABEL{lab, ...} => (NONE, NONE, NONE, SOME lab, false)
                                         | A.MOVE{dst, src, ...} => (NONE, NONE, SOME [dst], SOME [src], false)
                         val moveOpt = if isMove then
-                                        case (dstOpt, srcOpt) of (SOME (dst::tl), SOME (src::tl)) => SOME (dst, src)
+                                        case (dstOpt, srcOpt) of (SOME (dst::_), SOME (src::_)) => SOME (dst, src)
                                                      | _ => ErrorMsg.impossible "Error when extracting A.MOVE"
                                       else NONE
                         val def' = case dstOpt of
