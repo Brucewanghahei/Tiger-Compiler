@@ -3,7 +3,7 @@ sig
   structure LiveGraph : FUNCGRAPH
   structure IGraph : FUNCGRAPH
   structure Graph: FUNCGRAPH
-  structure tSet: ORD_SET
+  structure TSet: ORD_SET
 
   type t_tset = Temp.Set.set
   type t_lnode = {def: t_tset, use: t_tset, 

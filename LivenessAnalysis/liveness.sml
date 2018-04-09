@@ -4,8 +4,8 @@ structure Liveness: LIVENESS = struct
   structure FGraph = Flow.Graph
   structure IGraph = Flow.Graph
   structure LiveGraph = Flow.Graph
-  structure tSet = Temp.Set
-  structure tMap = Temp.Map
+  structure TSet = Temp.Set
+  structure TMap = Temp.Map
 
 
   type t_tset = Temp.Set.set
@@ -21,9 +21,14 @@ structure Liveness: LIVENESS = struct
                                tnode: Temp.temp -> t_inode,
                                gtemp: t_inode -> Temp.temp,
                               moves: (t_inode * t_inode) list}
+  datatype live = LIVE of {def: TSet.set,
+                           use: TSet.set,
+                           move: (Temp.temp * Temp.temp) option,
+                           li: TSet.set ref,
+                           lo: TSet.set ref}
 
   fun list2set lst =
-    foldl (fn (item, set) => tSet.add(set, item)) tSet.empty lst
+    foldl (fn (item, set) => TSet.add(set, item)) TSet.empty lst
 
   fun flow2liveGraph (flow: Flow.flowgraph) =
   let
@@ -39,8 +44,8 @@ structure Liveness: LIVENESS = struct
         val {def=def, use=use, move=move} = attrs
         val def = list2set def
         val use = list2set use
-        val new_attrs = {def=def, use=use, move=move, li=tSet.empty,
-        lo=tSet.empty}
+        val new_attrs = {def=def, use=use, move=move, li=TSet.empty,
+        lo=TSet.empty}
       in
         LiveGraph.addNode(livegraph, nid, new_attrs)
       end
@@ -81,18 +86,18 @@ structure Liveness: LIVENESS = struct
           val succs = LiveGraph.succs(node)
           val preds = LiveGraph.preds(node)
           val {def=def, use=use, move=move, li=old_li, lo=old_lo} = attrs
-          val new_li = tSet.union(use, (tSet.difference(old_lo, def)))
+          val new_li = TSet.union(use, (TSet.difference(old_lo, def)))
           val new_lo = foldl (
             fn (nid, set) => 
             let
               val n = LiveGraph.getNode(graph, nid)
               val li = #li (LiveGraph.nodeInfo node)
             in
-              tSet.union(set, li)
+              TSet.union(set, li)
             end
-          ) tSet.empty succs
-          val is_stable = ((tSet.compare(old_lo, new_lo) = EQUAL) andalso 
-                           (tSet.compare(old_li, new_li) = EQUAL))
+          ) TSet.empty succs
+          val is_stable = ((TSet.compare(old_lo, new_lo) = EQUAL) andalso 
+                           (TSet.compare(old_li, new_li) = EQUAL))
           val d = {def=def, use=use, move=move, li=new_li, lo=new_lo}
           val new_graph = LiveGraph.changeNodeData(graph, nid, d) 
         in
@@ -128,38 +133,86 @@ structure Liveness: LIVENESS = struct
   exception NidNotFound
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
-      val lGraph = flow2liveGraph(flow)
-      val (iGraph, tMap, mEdges ) = LGraph2IGraph lGraph
-      fun tnode x = Flow.Graph.getNode (iGraph, lookNid tMap x)
+      val lgraph = flow2liveGraph(flow)
+      val (igraph, tmap, moves ) = LGraph2IGraph lgraph
+      fun tnode x = Flow.Graph.getNode (igraph, lookNid (tmap x))
       fun gtemp x = Flow.Graph.nodeInfo(x)
-      val mEdges =
+      val moves =
         let
           fun isSame({from=f1, to=t1}, {from=f2, to=t2}) =
             if (f1=f2 andalso t1=t2) orelse (f1=t2 andalso f2=t1) then true else false
           fun hasEdge(e, []) = false
             | hasEdge(e, h::l) = if isSame(e, h) then true else hasEdge(e, l)
         in
-          foldl (fn (e, eList) => if hasEdge(e, eList) then eList else e::eList) [] mEdges
+          foldl (fn (e, eList) => if hasEdge(e, eList) then eList else e::eList) [] moves
         end
     in
-      IGRAPH{
-        graph=iGraph
-        tnode=tnode
-        gtemp=gtemp
-        moves=mEdges
-      }
+      IGRAPH{graph=igraph, tnode=tnode, gtemp=gtemp, moves=moves}
     end
   and LGraph2IGraph lgraph =
     let
+      val count = ref 0
+      val tmap = TMap.empty
+      val igraph = IGraph.empty
+      fun insertTemp (temp, (igraph, tmap)) =
+        case TMap.find (tmap, temp) of
+          SOME(i) =>
+            (igraph, tmap)
+          | NONE =>
+            let
+              val nid = !counter
+              val () = counter := nid + 1
+            in
+              (Graph.addNode (igraph, nid, temp), TMap.insert (tmap, temp, nid))
+            end
+      (* insert temps *)
+      val (igraph, tmap) = Graph.foldNodes (
+        fn (lnode, (igraph, tmap)) =>
+          let
+            val LIVE {def, use, move, li,lo} = Graph.nodeInfo lnode
+            val (igraph, tmap) = TSet.foldl insertTemp (igraph, tmap) def
+            val (igraph, tmap) = TSet.foldl insertTemp (igraph, tmap) use
+          in
+            (igraph, tmap)
+          end
+        ) (igraph, tmap) lgraph
+      (* insert edges *)
+      fun insertEdges (lnode, (igraph, moves)) =
+        let
+          val LIVE {def, use, move, li, lo} = Graph.nodeInfo lnode
+          val (igraph, moves) = TSet.foldl (
+            fn (defitem, (igraph, moves)) => (TSet.foldl (
+              fn (outitem, (igraph, moves)) => case move of
+                SOME(move) =>
+                  let
+                    val (useitem::_) = TSet.listItems useset
+                    val fromid = lookNid tmap useitem
+                    val toid = lookNid tmap defitem
+                    val outid = lookNid tmap outitem
+                  in
+                    if (fromid = outid) then (igraph, {from=fromid, to=toid}::moves)
+                    else (Graph.doubleEdge (igraph, toid, outid), moves)
+                  end
+                | None =>
+                  (Graph.doubleEdge (igraph, lookNid tmap defitem, lookNid tmap outitem), moves)
+              ) (igraph, moves) (!lo)
+            )
+          ) (igraph, moves) def
+        in
+          (igraph, moves)
+        end
+      (* add edges *)
+      val (igraph, moves) = Graph.foldNodes insertEdges (igraph, []) lgraph
     in
-      ()
+      (igraph, tmap, moves)
     end
-  and lookNid tMap x =
-    case tMap.find (tMap, x) of
+  and lookNid (tmap x) =
+    case TMap.find (tmap, x) of
       SOME(nid) => nid
       | _ => raise NidNotFound
   *)
-  fun ts2s set = tSet.foldl (fn (item,
+  
+  fun ts2s set = TSet.foldl (fn (item,
      s) => s ^ " " ^ (Int.toString item)) "" set
   fun showlive livegraph = (
      print("Live Graph\n");
