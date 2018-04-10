@@ -29,7 +29,7 @@ fun instrs2graph instrs =
         fun sequentialScan (instrs: A.instr list):
                                     F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
-                fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, use)) =
+                fun scan (instr, (id, graph, jumpsNodes, labelNodes, def)) =
                     let val (dstOpt, srcOpt, jumpOpt, labelOpt, isMove) =
                             case instr of A.OPER{dst, src, jump, ...} => (SOME dst, SOME src, jump, NONE, false)
                                         | A.LABEL{lab, ...} => (NONE, NONE, NONE, SOME lab, false)
@@ -38,21 +38,19 @@ fun instrs2graph instrs =
                                         case (dstOpt, srcOpt) of (SOME (dst::_), SOME (src::_)) => SOME (dst, src)
                                                      | _ => ErrorMsg.impossible "Error when extracting A.MOVE"
                                       else NONE
-                        val def' = case dstOpt of
-                                      SOME dst => foldl TSet.add' def dst
-                                    | NONE => def
-                        val use' = case srcOpt of
-                                      (* use before first def *)
-                                       SOME src => foldl (fn (item, st) =>
-                                                             if not (TSet.member(def, item))
-                                                             then TSet.add(st, item)
-                                                             else st)
-                                                         use src
-                                    | NONE => use
+                        val srcSet = case srcOpt of
+                                         SOME src => TSet.addList(TSet.empty, src)
+                                       | NONE => TSet.empty
+                        (* use before first def *)
+                        val nodeUse = TSet.difference(srcSet, def)
+                        (* don't add to def if used in this node *)
+                        val nodeDef = case dstOpt of
+                                          SOME dst => TSet.addList(TSet.empty, dst >/ List.filter (fn x => not (TSet.member(srcSet, x))))
+                                        | NONE => TSet.empty
                         val (graph', node) = G.addNode'(graph, id,
                                                        {
-                                                           def=def,
-                                                           use=use,
+                                                           def=nodeDef,
+                                                           use=nodeUse,
                                                            move = moveOpt
                                                        })
                         (* connect adjacent instrs if current instr doesn't jump *)
@@ -69,12 +67,14 @@ fun instrs2graph instrs =
                       case labelOpt of
                           SOME label => (label, id)::labelNodes
                         | NONE => labelNodes,
-                      def',
-                      use'
+                      (* record defs in a block *)
+                      case labelOpt of
+                          SOME _ => TSet.union(def, nodeDef)
+                        | NONE => TSet.empty
                     )
                     end
-                val (_, graph, jumpsNodes, labelNodes, _, _)
-                    = foldl scan (0, G.empty, [], [], TSet.empty, TSet.empty) instrs
+                val (_, graph, jumpsNodes, labelNodes, _)
+                    = foldl scan (0, G.empty, [], [], TSet.empty) instrs
             in
                 (graph, jumpsNodes, labelNodes)
             end
