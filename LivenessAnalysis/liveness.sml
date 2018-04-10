@@ -172,7 +172,7 @@ structure Liveness: LIVENESS = struct
       val (igraph, tmap) = Graph.foldNodes (
         fn (lnode, (igraph, tmap)) =>
           let
-            val LIVE {def, use, li, lo, move} = Graph.nodeInfo lnode
+            val {def=def, use=use, li=li, lo=lo, move=move} = Graph.nodeInfo lnode
             val (igraph, tmap) = TSet.foldl insertTemp (igraph, tmap) def
             val (igraph, tmap) = TSet.foldl insertTemp (igraph, tmap) use
           in
@@ -182,7 +182,7 @@ structure Liveness: LIVENESS = struct
       (* insert edges *)
       fun insertEdges (lnode, (igraph, moves)) =
         let
-          val LIVE {def, use, move, li, lo} = Graph.nodeInfo lnode
+          val {def=def, use=use, move=move, li=li, lo=lo} = Graph.nodeInfo lnode
           val (igraph, moves) = TSet.foldl (
             fn (defitem, (igraph, moves)) => (TSet.foldl (
               fn (outitem, (igraph, moves)) => case move of
@@ -198,7 +198,7 @@ structure Liveness: LIVENESS = struct
                   end
                 | None =>
                   (Graph.doubleEdge (igraph, lookNid(tmap defitem), lookNid(tmap outitem)), moves)
-              ) (igraph, moves) (!lo)
+              ) (igraph, moves) (lo)
             )
           ) (igraph, moves) def
         in
