@@ -134,8 +134,8 @@ structure Liveness: LIVENESS = struct
       fun gtemp x = Flow.Graph.nodeInfo(x)
       val moves =
         let
-          fun isSame({from=f1, to=t1}, {from=f2, to=t2}) =
-            if (f1=f2 andalso t1=t2) orelse (f1=t2 andalso f2=t1) then true else false
+          fun isSame((f1, t1), (f2, t2)) =
+            if (f1 = f2 andalso t1 = t2) orelse (f1 = t2 andalso f2 = t1) then true else false
           fun hasEdge(e, []) = false
             | hasEdge(e, h::l) = if isSame(e, h) then true else hasEdge(e, l)
         in
@@ -185,15 +185,15 @@ structure Liveness: LIVENESS = struct
                 SOME(move) =>
                   let
                     val (useitem::_) = TSet.listItems use
-                    val fromid = lookNid(tmap useitem)
-                    val toid = lookNid(tmap defitem)
-                    val outid = lookNid(tmap outitem)
+                    val fromid = lookNid(tmap, useitem)
+                    val toid = lookNid(tmap, defitem)
+                    val outid = lookNid(tmap, outitem)
                   in
-                    if (fromid = outid) then (igraph, {from=fromid, to=toid}::moves)
+                    if (fromid = outid) then (igraph, (fromid, toid)::moves)
                     else (Graph.doubleEdge (igraph, toid, outid), moves)
                   end
                 | None =>
-                  (Graph.doubleEdge (igraph, lookNid(tmap defitem), lookNid(tmap outitem)), moves)
+                  (Graph.doubleEdge (igraph, lookNid(tmap, defitem), lookNid(tmap, outitem)), moves)
               ) (igraph, moves) (lo)
             )
           ) (igraph, moves) def
@@ -205,11 +205,6 @@ structure Liveness: LIVENESS = struct
     in
       (igraph, tmap, moves)
     end
-  and lookNid (tmap x) =
-    case TMap.find (tmap, x) of
-      SOME(nid) => nid
-      | _ => raise NidNotFound
-  
 
   val ts2s = Temp.ts2s
   
@@ -218,10 +213,10 @@ structure Liveness: LIVENESS = struct
       fun toString (nid, temp) = MipsFrame.temp2str temp
       val () = Graph.printGraph toString graph
       val () = print ("Move Edges:\n")
-      fun Edge2String {from, to} =
+      fun Edge2String (from, to) =
         let
-            val fromtemp = Graph.nodeInfo (Graph.getNode (graph, from))
-            val totemp = Graph.nodeInfo (Graph.getNode (graph, to))
+            val fromtemp = Graph.nodeInfo (from)
+            val totemp = Graph.nodeInfo (to)
             val fromstr = toString (from, fromtemp)
             val tostr = toString (to, totemp)
         in
