@@ -13,5 +13,6 @@ sig
   type 'a map
   type set
   val tl2s: temp list -> string
+  val ts2s: Set.set -> string
 end
 
