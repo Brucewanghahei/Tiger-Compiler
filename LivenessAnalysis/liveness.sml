@@ -21,11 +21,11 @@ structure Liveness: LIVENESS = struct
                                tnode: Temp.temp -> t_inode,
                                gtemp: t_inode -> Temp.temp,
                               moves: (t_inode * t_inode) list}
-  datatype live = LIVE of {def: TSet.set,
-                           use: TSet.set,
+  datatype live = LIVE of {def: Temp.Set.set,
+                           use: Temp.Set.set,
                            move: (Temp.temp * Temp.temp) option,
-                           li: TSet.set ref,
-                           lo: TSet.set ref}
+                           li: Temp.Set.set ref,
+                           lo: Temp.Set.set ref}
 
   fun list2set lst =
     foldl (fn (item, set) => TSet.add(set, item)) TSet.empty lst
@@ -133,7 +133,7 @@ structure Liveness: LIVENESS = struct
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
       val lgraph = flow2liveGraph(flow)
-      val (igraph, tmap, moves ) = LGraph2IGraph lgraph
+      val (igraph, tmap, moves) = LGraph2IGraph lgraph
       fun tnode x = Flow.Graph.getNode (igraph, lookNid (tmap x))
       fun gtemp x = Flow.Graph.nodeInfo(x)
       val moves =
@@ -148,6 +148,10 @@ structure Liveness: LIVENESS = struct
     in
       IGRAPH{graph=igraph, tnode=tnode, gtemp=gtemp, moves=moves}
     end
+  and lookNid(tmap, x) =
+    case TMap.find (tmap, x) of
+      SOME(nid) => nid
+      | _ => raise NidNotFound
   and LGraph2IGraph lgraph =
     let
       val count = ref 0
@@ -159,8 +163,8 @@ structure Liveness: LIVENESS = struct
             (igraph, tmap)
           | NONE =>
             let
-              val nid = !counter
-              val () = counter := nid + 1
+              val nid = !count
+              val () = count := nid + 1
             in
               (Graph.addNode (igraph, nid, temp), TMap.insert (tmap, temp, nid))
             end
@@ -168,7 +172,7 @@ structure Liveness: LIVENESS = struct
       val (igraph, tmap) = Graph.foldNodes (
         fn (lnode, (igraph, tmap)) =>
           let
-            val LIVE {def, use, move, li,lo} = Graph.nodeInfo lnode
+            val LIVE {def, use, li, lo, move} = Graph.nodeInfo lnode
             val (igraph, tmap) = TSet.foldl insertTemp (igraph, tmap) def
             val (igraph, tmap) = TSet.foldl insertTemp (igraph, tmap) use
           in
@@ -184,16 +188,16 @@ structure Liveness: LIVENESS = struct
               fn (outitem, (igraph, moves)) => case move of
                 SOME(move) =>
                   let
-                    val (useitem::_) = TSet.listItems useset
-                    val fromid = lookNid tmap useitem
-                    val toid = lookNid tmap defitem
-                    val outid = lookNid tmap outitem
+                    val (useitem::_) = TSet.listItems use
+                    val fromid = lookNid(tmap useitem)
+                    val toid = lookNid(tmap defitem)
+                    val outid = lookNid(tmap outitem)
                   in
                     if (fromid = outid) then (igraph, {from=fromid, to=toid}::moves)
                     else (Graph.doubleEdge (igraph, toid, outid), moves)
                   end
                 | None =>
-                  (Graph.doubleEdge (igraph, lookNid tmap defitem, lookNid tmap outitem), moves)
+                  (Graph.doubleEdge (igraph, lookNid(tmap defitem), lookNid(tmap outitem)), moves)
               ) (igraph, moves) (!lo)
             )
           ) (igraph, moves) def
@@ -205,13 +209,29 @@ structure Liveness: LIVENESS = struct
     in
       (igraph, tmap, moves)
     end
-  and lookNid (tmap x) =
-    case TMap.find (tmap, x) of
-      SOME(nid) => nid
-      | _ => raise NidNotFound
   
   fun ts2s set = TSet.foldl (fn (item,
      s) => s ^ " " ^ (Int.toString item)) "" set
+  
+  fun show (IGRAPH{graph, tnode, gtemp, moves}) =
+    let
+      fun toString (nid, temp) = MipsFrame.temp2str temp
+      val () = Graph.printGraph toString graph
+      val () = print ("Move Edges:\n")
+      fun Edge2String {from, to} =
+        let
+            val fromtemp = Graph.nodeInfo (Graph.getNode (graph, from))
+            val totemp = Graph.nodeInfo (Graph.getNode (graph, to))
+            val fromstr = toString (from, fromtemp)
+            val tostr = toString (to, totemp)
+        in
+            print (fromstr ^ "-->" ^ tostr ^ "\n")
+        end
+      val _ = map Edge2String moves
+    in
+      ()
+    end
+  
   fun showlive livegraph = (
      print("Live Graph\n");
      Graph.printGraph (fn (nid, {def=def, use=use, move=move,
