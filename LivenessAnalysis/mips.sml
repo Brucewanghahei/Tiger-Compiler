@@ -186,7 +186,7 @@ let
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
     ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
-    erm("add $rd $rs $zero\n" , munchExp e2, t)
+      erm("add $rd $rs $zero\n", t, munchExp e2)
   	| munchStm (T.LABEL lab) =
     erl((Symbol.name lab) ^ ":\n", lab)
     (* return value of call isn't needed *)
