@@ -134,5 +134,27 @@ fun printGraph stringify g =
     in
 	NodeMap.app prOneNode g
     end
+
+fun printGraph' stringify g = 
+    let fun println x = print(x ^"\n")
+	    fun stringNid nid = 
+	        let val (_,data,_,_) = getNode(g,nid)
+	        in
+		        "   "^ stringify(nid,data)
+	        end
+	    fun prSet s = NodeSet.app (println o stringNid) s
+	    fun prOneNode(nid,data,succs,preds) = 
+	        let val s = stringify(nid,data)
+		        val () = println("Node: " ^ s)
+		        (* val () = println(" -> Successors:") *)
+		        (* val () = prSet succs *)
+		        (* val () = println(" -> Predecessors:") *)
+		        (* val () = prSet preds *)
+	        in
+		        ()
+	        end
+    in
+	    NodeMap.app prOneNode g
+    end
   
 end
