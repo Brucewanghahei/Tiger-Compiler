@@ -24,9 +24,13 @@ sig
                            li: Temp.Set.set ref,
                            lo: Temp.Set.set ref}
 
+  (*
   val interferenceGraph : Flow.flowgraph -> t_igraph * (Flow.t_node -> Temp.temp list)
+  *)
   val flow2liveGraph : Flow.flowgraph -> t_lgraph
 
-  val show : igraph -> unit
+  (*
+  val show : TextIO.outstream * igraph -> unit
+  *)
   val showlive: t_lgraph -> unit
 end

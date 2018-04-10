@@ -8,8 +8,8 @@ structure Liveness: LIVENESS = struct
   structure TMap = Temp.Map
 
 
-  type t_tset = Temp.Set.set
-  type t_lnode = {def: t_tset, use: t_tset, 
+  type t_tset = TSet.set
+  type t_lnode = {def: t_tset, use: t_tset,
                   move: (Temp.temp * Temp.temp) option,
                   li: t_tset, lo: t_tset}
   type t_inode = Temp.temp Graph.node
@@ -21,14 +21,12 @@ structure Liveness: LIVENESS = struct
                                tnode: Temp.temp -> t_inode,
                                gtemp: t_inode -> Temp.temp,
                               moves: (t_inode * t_inode) list}
-  datatype live = LIVE of {def: Temp.Set.set,
-                           use: Temp.Set.set,
+  datatype live = LIVE of {def: t_tset,
+                           use: t_tset,
                            move: (Temp.temp * Temp.temp) option,
-                           li: Temp.Set.set ref,
-                           lo: Temp.Set.set ref}
+                           li: t_tset ref,
+                           lo: t_tset ref}
 
-  fun list2set lst =
-    foldl (fn (item, set) => TSet.add(set, item)) TSet.empty lst
 
   fun flow2liveGraph (flow: Flow.flowgraph) =
   let
@@ -42,8 +40,6 @@ structure Liveness: LIVENESS = struct
         val nid = FGraph.getNodeID(flownode)
         val attrs = FGraph.nodeInfo(flownode)
         val {def=def, use=use, move=move} = attrs
-        val def = list2set def
-        val use = list2set use
         val new_attrs = {def=def, use=use, move=move, li=TSet.empty,
         lo=TSet.empty}
       in
@@ -129,6 +125,7 @@ structure Liveness: LIVENESS = struct
     transFlow2Live()
   end
 
+  (*
   exception NidNotFound
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
@@ -209,9 +206,14 @@ structure Liveness: LIVENESS = struct
     in
       (igraph, tmap, moves)
     end
+  and lookNid (tmap x) =
+    case TMap.find (tmap, x) of
+      SOME(nid) => nid
+      | _ => raise NidNotFound
+  *)
   
-  fun ts2s set = TSet.foldl (fn (item,
-     s) => s ^ " " ^ (Int.toString item)) "" set
+
+  val ts2s = Temp.ts2s
   
   fun show (IGRAPH{graph, tnode, gtemp, moves}) =
     let
@@ -239,5 +241,4 @@ structure Liveness: LIVENESS = struct
      "\nlive out: " ^ (ts2s lo) ^
      "\nlive in: " ^ (ts2s li)) livegraph)
 end
-    
 
