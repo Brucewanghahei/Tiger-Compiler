@@ -18,6 +18,11 @@ sig
                                tnode: Temp.temp -> t_inode,
                                gtemp: t_inode -> Temp.temp,
                               moves: (t_inode * t_inode) list}
+  datatype live = LIVE of {def: Temp.Set.set,
+                           use: Temp.Set.set,
+                           move: (Temp.temp * Temp.temp) option,
+                           li: Temp.Set.set ref,
+                           lo: Temp.Set.set ref}
 
   (*
   val interferenceGraph : Flow.flowgraph -> t_igraph * (Flow.t_node -> Temp.temp list)
