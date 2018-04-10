@@ -125,7 +125,6 @@ structure Liveness: LIVENESS = struct
     transFlow2Live()
   end
 
-  (*
   exception NidNotFound
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
@@ -210,7 +209,6 @@ structure Liveness: LIVENESS = struct
     case TMap.find (tmap, x) of
       SOME(nid) => nid
       | _ => raise NidNotFound
-  *)
   
 
   val ts2s = Temp.ts2s
