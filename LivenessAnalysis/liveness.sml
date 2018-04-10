@@ -27,8 +27,6 @@ structure Liveness: LIVENESS = struct
                            li: TSet.set ref,
                            lo: TSet.set ref}
 
-  fun list2set lst =
-    foldl (fn (item, set) => TSet.add(set, item)) TSet.empty lst
 
   fun flow2liveGraph (flow: Flow.flowgraph) =
   let
@@ -42,8 +40,6 @@ structure Liveness: LIVENESS = struct
         val nid = FGraph.getNodeID(flownode)
         val attrs = FGraph.nodeInfo(flownode)
         val {def=def, use=use, move=move} = attrs
-        val def = list2set def
-        val use = list2set use
         val new_attrs = {def=def, use=use, move=move, li=TSet.empty,
         lo=TSet.empty}
       in
@@ -129,6 +125,7 @@ structure Liveness: LIVENESS = struct
     transFlow2Live()
   end
 
+  (*
   exception NidNotFound
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
@@ -209,9 +206,9 @@ structure Liveness: LIVENESS = struct
     case TMap.find (tmap, x) of
       SOME(nid) => nid
       | _ => raise NidNotFound
+  *)
   
-  fun ts2s set = TSet.foldl (fn (item,
-     s) => s ^ " " ^ (Int.toString item)) "" set
+  val ts2s = Temp.ts2s
   fun showlive livegraph = (
      print("Live Graph\n");
      Graph.printGraph (fn (nid, {def=def, use=use, move=move,

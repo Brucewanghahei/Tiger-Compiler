@@ -9,6 +9,7 @@ structure A = Assem
 structure F = Flow
 structure G = F.Graph
 structure T = Temp
+structure TSet = Temp.Set
 
 
 (* type node = {def: Temp.temp list, use: Temp.temp list,  *)
@@ -38,15 +39,15 @@ fun instrs2graph instrs =
                                                      | _ => ErrorMsg.impossible "Error when extracting A.MOVE"
                                       else NONE
                         val def' = case dstOpt of
-                                      SOME dst => dst @ def
+                                      SOME dst => foldl TSet.add' def dst
                                     | NONE => def
                         val use' = case srcOpt of
                                       (* use before first def *)
-                                      SOME src => (List.filter
-                                                      (fn s => case List.find (fn x => x = s) def of
-                                                                   SOME _ => false
-                                                                 | NONE => true)
-                                                      src)@use
+                                       SOME src => foldl (fn (item, st) =>
+                                                             if not (TSet.member(def, item))
+                                                             then TSet.add(st, item)
+                                                             else st)
+                                                         use src
                                     | NONE => use
                         val (graph', node) = G.addNode'(graph, id,
                                                        {
@@ -73,7 +74,7 @@ fun instrs2graph instrs =
                     )
                     end
                 val (_, graph, jumpsNodes, labelNodes, _, _)
-                    = foldl scan (0, G.empty, [], [], [], []) instrs
+                    = foldl scan (0, G.empty, [], [], TSet.empty, TSet.empty) instrs
             in
                 (graph, jumpsNodes, labelNodes)
             end

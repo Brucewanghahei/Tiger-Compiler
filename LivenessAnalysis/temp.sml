@@ -44,7 +44,7 @@ struct
     end
     val namedlabel = Symbol.symbol
 
-    fun tl2s tl= (foldl (fn (item, s) => s ^ " " ^ (makestring
-    item)) "" tl) 
+    fun tl2s tl= (foldl (fn (item, s) => s ^ " " ^ (makestring item)) "" tl) 
+    fun ts2s tl= (Set.foldl (fn (item, s) => s ^ " " ^ (makestring item)) "" tl) 
 
 end

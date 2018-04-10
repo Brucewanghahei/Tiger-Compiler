@@ -19,9 +19,13 @@ sig
                                gtemp: t_inode -> Temp.temp,
                               moves: (t_inode * t_inode) list}
 
+  (*
   val interferenceGraph : Flow.flowgraph -> t_igraph * (Flow.t_node -> Temp.temp list)
+  *)
   val flow2liveGraph : Flow.flowgraph -> t_lgraph
 
+  (*
   val show : TextIO.outstream * igraph -> unit
+  *)
   val showlive: t_lgraph -> unit
 end
