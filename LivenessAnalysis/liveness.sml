@@ -129,30 +129,33 @@ structure Liveness: LIVENESS = struct
   fun interferenceGraph (flow: Flow.flowgraph) = 
     let
       val lgraph = flow2liveGraph(flow)
-      val (igraph, tmap, moves) = LGraph2IGraph lgraph
-      fun tnode x = Flow.Graph.getNode (igraph, lookNid (tmap x))
-      fun gtemp x = Flow.Graph.nodeInfo(x)
-      val moves =
+      val (igraph:t_igraph, tmap, moves) = LGraph2IGraph lgraph
+      fun tnode (x:Temp.temp) :t_inode = Flow.Graph.getNode (igraph, lookNid (tmap, x))
+      fun gtemp (x:t_inode) = Flow.Graph.nodeInfo(x)
+      type t_id = Graph.nodeID
+      val moves_no_duplicate  =
         let
-          fun isSame((f1, t1), (f2, t2)) =
+          fun isSame((f1:t_id, t1:t_id), (f2:t_id, t2:t_id)) =
             if (f1 = f2 andalso t1 = t2) orelse (f1 = t2 andalso f2 = t1) then true else false
           fun hasEdge(e, []) = false
             | hasEdge(e, h::l) = if isSame(e, h) then true else hasEdge(e, l)
         in
           foldl (fn (e, eList) => if hasEdge(e, eList) then eList else e::eList) [] moves
         end
+      fun mapEdge(f, t) = (tnode f, tnode t)
+      val moves = map mapEdge moves_no_duplicate
     in
-      IGRAPH{graph=igraph, tnode=tnode, gtemp=gtemp, moves=moves}
+      (IGRAPH{graph=igraph, tnode=tnode, gtemp=gtemp, moves=moves}, lgraph)
     end
-  and lookNid(tmap, x) =
+  and lookNid(tmap:Graph.nodeID TMap.map, x):Graph.nodeID =
     case TMap.find (tmap, x) of
       SOME(nid) => nid
       | _ => raise NidNotFound
   and LGraph2IGraph lgraph =
     let
       val count = ref 0
-      val tmap = TMap.empty
-      val igraph = IGraph.empty
+      val tmap= TMap.empty
+      val igraph :t_igraph = IGraph.empty
       fun insertTemp (temp, (igraph, tmap)) =
         case TMap.find (tmap, temp) of
           SOME(i) =>
@@ -165,7 +168,7 @@ structure Liveness: LIVENESS = struct
               (Graph.addNode (igraph, nid, temp), TMap.insert (tmap, temp, nid))
             end
       (* insert temps *)
-      val (igraph, tmap) = Graph.foldNodes (
+      val (igraph, tmap: Graph.nodeID TMap.map ) = Graph.foldNodes (
         fn (lnode, (igraph, tmap)) =>
           let
             val {def=def, use=use, li=li, lo=lo, move=move} = Graph.nodeInfo lnode
