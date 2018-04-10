@@ -26,6 +26,14 @@ val empty = NodeMap.empty
 fun getNode(g,nid) = case NodeMap.find(g,nid) of
 			 NONE => raise NoSuchNode(nid)
 		       | SOME x=> x
+
+fun setNode(g,nid,d,succs,preds) =
+let
+  fun l2s l = NodeSet.addList(NodeSet.empty, l)
+in
+  NodeMap.insert(g,nid,(nid,d,l2s succs,l2s preds))
+end
+
 fun addNode(g,nid,d) = NodeMap.insert(g,nid,(nid,d,NodeSet.empty,NodeSet.empty))
 fun addNode'(g,nid,d) = 
     let val n = (nid,d,NodeSet.empty,NodeSet.empty)
@@ -108,6 +116,7 @@ fun foldSuccs f init (_,_,s,_) = NodeSet.foldl f init s
 fun foldSuccs' g f init (_,_,s,_) = NodeSet.foldl (fn(nid,x)=>f(getNode(g,nid),x)) init s
 fun foldPreds f init (_,_,_,p) = NodeSet.foldl f init p
 fun foldPreds' g f init (_,_,_,p) = NodeSet.foldl (fn(nid,x)=>f(getNode(g,nid),x)) init p
+
 
 fun isAdjacent ((n1,_,s1,p1),(n2,_,s2,p2)) = 
   NodeSet.member(NodeSet.union(s1,p1),n2) orelse

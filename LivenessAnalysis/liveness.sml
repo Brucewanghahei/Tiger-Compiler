@@ -40,7 +40,7 @@ structure Liveness: LIVENESS = struct
         val nid = FGraph.getNodeID(flownode)
         val attrs = FGraph.nodeInfo(flownode)
         val {def=def, use=use, move=move} = attrs
-        val new_attrs = {def=def, use=use, move=move, li=TSet.empty,
+        val new_attrs:t_lnode = {def=def, use=use, move=move, li=TSet.empty,
         lo=TSet.empty}
       in
         LiveGraph.addNode(livegraph, nid, new_attrs)
@@ -48,7 +48,6 @@ structure Liveness: LIVENESS = struct
 
       val initgraph = LiveGraph.foldNodes init LiveGraph.empty flow
 
-      (*
       (* Second, copy the edges *)
       (* lg: livegraph *)
       fun trans (lg_old_node, lg_new) =
@@ -59,18 +58,18 @@ structure Liveness: LIVENESS = struct
         val old_preds = LiveGraph.preds(lg_old_node)
         val lg_new_node = LiveGraph.getNode(lg_new, nid)
         val new_attrs = LiveGraph.nodeInfo(lg_new_node)
+        (*
         fun remap node_set = LiveGraph.NodeSet.map (fn nid =>
           LiveGraph.getNode(lg_new, nid)) node_set
-        val new_succs = remap old_succs
-        val new_preds = remap old_preds
+          *)
+        val new_succs = old_succs
+        val new_preds = old_preds
       in
-        LiveGraph.NodeMap.insert(lg_new, nid, (nid, new_attrs, new_succs,
-        new_preds))
+        LiveGraph.setNode(lg_new, nid, new_attrs, new_succs,
+        new_preds)
       end
 
-      val transgraph = LiveGraph.foldNodes trans flow initgraph
-      *)
-      val transgraph = initgraph
+      val transgraph:t_lgraph = LiveGraph.foldNodes trans initgraph flow
 
       (* Third, recursively calculate the liveness *)
       fun liveiterate () = 
@@ -100,7 +99,7 @@ structure Liveness: LIVENESS = struct
           (is_stable, new_graph)
         end
 
-        fun helper (false, graph) =
+        fun helper (false, graph:t_lgraph) =
         let
           val iterated = 
           LiveGraph.foldNodes (fn (node, (is_stable, graph)) =>
@@ -231,8 +230,9 @@ structure Liveness: LIVENESS = struct
     end
   
   fun showlive livegraph = (
+     print("====================\n");
      print("Live Graph\n");
-     Graph.printGraph (fn (nid, {def=def, use=use, move=move,
+     Graph.printGraph' (fn (nid, {def=def, use=use, move=move,
      li=li, lo=lo}:t_lnode) => (Int.toString nid) ^ 
      "\nlive out: " ^ (ts2s lo) ^
      "\nlive in: " ^ (ts2s li)) livegraph)
