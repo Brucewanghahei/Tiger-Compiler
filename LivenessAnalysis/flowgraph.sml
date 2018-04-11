@@ -20,10 +20,13 @@ type t_node = {def: TSet.set, use: TSet.set,
 type flowgraph = t_node Graph.graph
 
 fun println x = print (x ^ "\n");
-fun printMove (SOME((t1, t2))) = (Temp.makestring t1) ^ "-" ^ (Temp.makestring t2)
+fun printMove (SOME((t1, t2))) = (MipsFrame.temp2str t1) ^ "-" ^ (MipsFrame.temp2str t2)
   | printMove NONE = ""
 
+  (*
 val ts2s = Temp.ts2s
+*)
+fun ts2s tl= (TSet.foldl (fn (item, s) => s ^ " " ^ (MipsFrame.temp2str item)) "" tl) 
 fun show flowgraph =(
   println("===================");
   println("Flow Graph");

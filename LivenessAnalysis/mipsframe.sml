@@ -79,7 +79,7 @@ struct
 
   fun temp2str tmp=
       case Temp.Map.find(tempMap, tmp) of
-          SOME s => s
+          SOME s => (Temp.makestring tmp) ^ "(" ^ s ^ ")"
         | NONE => Temp.makestring tmp
 
   fun newAccess (k: int ref, escape: bool): access =

@@ -112,6 +112,9 @@ val isAdjacent: 'a node * 'a node -> bool
  *)
 val printGraph:  ((nodeID * 'a) -> string) -> 'a graph  -> unit
 
+(* undirected graph *)
+val printUGraph:  ((nodeID * 'a) -> string) -> 'a graph  -> unit
+
 (* suppress output of succ and pred*)
 val printGraph':  ((nodeID * 'a) -> string) -> 'a graph  -> unit
 

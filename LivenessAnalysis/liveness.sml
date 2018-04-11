@@ -26,9 +26,10 @@ structure Liveness: LIVENESS = struct
                            move: (Temp.temp * Temp.temp) option,
                            li: t_tset ref,
                            lo: t_tset ref}
-
+(*
   val ts2s = Temp.ts2s
-
+  *)
+  fun ts2s tl= (TSet.foldl (fn (item, s) => s ^ " " ^ (MipsFrame.temp2str item)) "" tl) 
   fun flow2liveGraph (flow: Flow.flowgraph) =
   let
     type t_fnode = Flow.t_node FGraph.node
@@ -145,7 +146,10 @@ structure Liveness: LIVENESS = struct
           foldl (fn (e, eList) => if (hasEdge(e, eList) orelse isCycle(e)) then eList else e::eList) [] moves
         end
       fun mapEdge(f, t) = (tnode f, tnode t)
+      (*
       val moves = map mapEdge moves_no_duplicate
+      *)
+      val moves = map mapEdge moves
     in
       (IGRAPH{graph=igraph, tnode=tnode, gtemp=gtemp, moves=moves}, lgraph)
     end
@@ -184,27 +188,21 @@ structure Liveness: LIVENESS = struct
       fun insertEdges (lnode, (igraph, moves)) =
         let
           val {def=def, use=use, move=move, li=li, lo=lo} = Graph.nodeInfo lnode
-          val (igraph, moves) = TSet.foldl (
-            fn (defitem, (igraph, moves)) => (TSet.foldl (
-              fn (outitem, (igraph, moves)) => case move of
-                SOME(move) =>
-                  (igraph, move::moves)
-                  (*let
-                    val (usetemp::_) = TSet.listItems use
-                    val fromid = lookNid(tmap, usetemp)
-                    val toid = lookNid(tmap, deftemp)
-                    val outid = lookNid(tmap, outtemp)
-                  in
-                    (igraph, move::moves)
-                    (igraph, (deftemp, usetemp)::moves)
-                    if (fromid = outid) then (igraph, (fromid, toid)::moves)
-                    else (Graph.doubleEdge (igraph, toid, outid), moves)
-                  end*)
-                | None =>
-                  (Graph.doubleEdge (igraph, lookNid(tmap, defitem), lookNid(tmap, outitem)), moves)
-              ) (igraph, moves) (lo)
-            )
-          ) (igraph, moves) def
+          val moves = case move of SOME (move) => move::moves | NONE => moves
+          val () = case move of 
+                        SOME((t1, t2)) => print("move: " ^(Temp.makestring t1) 
+                        ^ "~" ^ (Temp.makestring t2) ^"\n")
+                      | NONE => ()
+          val igraph = TSet.foldl (
+            fn (liitem1, igraph) => (TSet.foldl (
+              fn (liitem2, igraph) => 
+                if (liitem1 <> liitem2) then
+                  Graph.doubleEdge (igraph, lookNid(tmap, liitem1),
+                  lookNid(tmap, liitem2))
+                else
+                  igraph
+              ) igraph li
+            )) igraph li
         in
           (igraph, moves)
         end
@@ -219,7 +217,7 @@ structure Liveness: LIVENESS = struct
       fun toString (nid, temp) = MipsFrame.temp2str temp
       val () = print("================\n")
       val () = print("Interference Graph\n")
-      val () = Graph.printGraph toString graph
+      val () = Graph.printUGraph toString graph
       val () = print ("Move Edges:\n")
       fun Edge2String (from, to) =
         let
@@ -235,7 +233,8 @@ structure Liveness: LIVENESS = struct
       ()
     end
   
-  fun printMove (SOME((t1, t2))) = (Temp.makestring t1) ^ "-" ^ (Temp.makestring t2)
+  fun printMove (SOME((t1, t2))) = (MipsFrame.temp2str t1) ^ "-" ^
+    (MipsFrame.temp2str t2)
     | printMove NONE = ""
   fun showlive livegraph = (
      print("====================\n");
