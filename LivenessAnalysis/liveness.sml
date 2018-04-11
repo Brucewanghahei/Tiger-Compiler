@@ -230,12 +230,15 @@ structure Liveness: LIVENESS = struct
       ()
     end
   
+  fun printMove (SOME((t1, t2))) = (Temp.makestring t1) ^ "-" ^ (Temp.makestring t2)
+    | printMove NONE = ""
   fun showlive livegraph = (
      print("====================\n");
      print("Live Graph\n");
      Graph.printGraph'' (fn (nid, {def=def, use=use, move=move,
      li=li, lo=lo}:t_lnode) => (Int.toString nid) ^ 
      "\nlive out: " ^ (ts2s lo) ^
-     "\nlive in: " ^ (ts2s li)) (fn nid=>Int.toString nid) livegraph)
+     "\nlive in: " ^ (ts2s li) ^
+     "\nmove : " ^ (printMove move)) (fn nid=>Int.toString nid) livegraph)
 end
 
