@@ -136,11 +136,13 @@ structure Liveness: LIVENESS = struct
       val moves_no_duplicate  =
         let
           fun isSame((f1:t_id, t1:t_id), (f2:t_id, t2:t_id)) =
-            if (f1 = f2 andalso t1 = t2) orelse (f1 = t2 andalso f2 = t1) then true else false
+            if ((f1 = f2 andalso t1 = t2) orelse (f1 = t2 andalso f2 = t1)) then true else false
+          fun isCycle(f1:t_id, t1:t_id) =
+            if (f1 = t1) then true else false
           fun hasEdge(e, []) = false
             | hasEdge(e, h::l) = if isSame(e, h) then true else hasEdge(e, l)
         in
-          foldl (fn (e, eList) => if hasEdge(e, eList) then eList else e::eList) [] moves
+          foldl (fn (e, eList) => if (hasEdge(e, eList) orelse isCycle(e)) then eList else e::eList) [] moves
         end
       fun mapEdge(f, t) = (tnode f, tnode t)
       val moves = map mapEdge moves_no_duplicate
@@ -186,15 +188,18 @@ structure Liveness: LIVENESS = struct
             fn (defitem, (igraph, moves)) => (TSet.foldl (
               fn (outitem, (igraph, moves)) => case move of
                 SOME(move) =>
-                  let
-                    val (useitem::_) = TSet.listItems use
-                    val fromid = lookNid(tmap, useitem)
-                    val toid = lookNid(tmap, defitem)
-                    val outid = lookNid(tmap, outitem)
+                  (igraph, move::moves)
+                  (*let
+                    val (usetemp::_) = TSet.listItems use
+                    val fromid = lookNid(tmap, usetemp)
+                    val toid = lookNid(tmap, deftemp)
+                    val outid = lookNid(tmap, outtemp)
                   in
+                    (igraph, move::moves)
+                    (igraph, (deftemp, usetemp)::moves)
                     if (fromid = outid) then (igraph, (fromid, toid)::moves)
                     else (Graph.doubleEdge (igraph, toid, outid), moves)
-                  end
+                  end*)
                 | None =>
                   (Graph.doubleEdge (igraph, lookNid(tmap, defitem), lookNid(tmap, outitem)), moves)
               ) (igraph, moves) (lo)
