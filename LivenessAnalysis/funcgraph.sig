@@ -115,4 +115,6 @@ val printGraph:  ((nodeID * 'a) -> string) -> 'a graph  -> unit
 (* suppress output of succ and pred*)
 val printGraph':  ((nodeID * 'a) -> string) -> 'a graph  -> unit
 
+(* simplify output of succ and pred*)
+val printGraph'':  ((nodeID * 'a) -> string) -> (nodeID -> string) -> 'a graph  -> unit
 end

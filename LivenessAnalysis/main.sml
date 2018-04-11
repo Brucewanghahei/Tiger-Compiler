@@ -16,7 +16,7 @@ structure Main = struct
          val instrs =   List.concat(map (Mips.codegen frame) stms') 
          val instrs2 = F.procEntryExit2(frame, instrs)
          val flowgraph = MakeGraph.instrs2graph(instrs2)
-         val livegraph = Liveness.flow2liveGraph(flowgraph)
+         val (infegraph, livegraph) = Liveness.interferenceGraph(flowgraph)
          val {prolog, body = bodyInstrs, epilog} = F.procEntryExit3(frame, instrs2)
          val format0 = Assem.format(Temp.makestring)
      in
@@ -26,6 +26,7 @@ structure Main = struct
          app (fn i => TextIO.output(TextIO.stdOut,format0 i)) instrs2;
          Flow.show flowgraph;
          Liveness.showlive livegraph;
+         Liveness.show infegraph;
          TextIO.output(out,epilog)
      end
    | emitproc out (F.STRING(lab,s)) = TextIO.output(out,F.string(lab,s))

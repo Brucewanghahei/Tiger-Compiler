@@ -27,6 +27,7 @@ structure Liveness: LIVENESS = struct
                            li: t_tset ref,
                            lo: t_tset ref}
 
+  val ts2s = Temp.ts2s
 
   fun flow2liveGraph (flow: Flow.flowgraph) =
   let
@@ -86,7 +87,7 @@ structure Liveness: LIVENESS = struct
             fn (nid, set) => 
             let
               val n = LiveGraph.getNode(graph, nid)
-              val li = #li (LiveGraph.nodeInfo node)
+              val li = #li (LiveGraph.nodeInfo n)
             in
               TSet.union(set, li)
             end
@@ -207,12 +208,12 @@ structure Liveness: LIVENESS = struct
     in
       (igraph, tmap, moves)
     end
-
-  val ts2s = Temp.ts2s
   
   fun show (IGRAPH{graph, tnode, gtemp, moves}) =
     let
       fun toString (nid, temp) = MipsFrame.temp2str temp
+      val () = print("================\n")
+      val () = print("Interference Graph\n")
       val () = Graph.printGraph toString graph
       val () = print ("Move Edges:\n")
       fun Edge2String (from, to) =
@@ -232,9 +233,9 @@ structure Liveness: LIVENESS = struct
   fun showlive livegraph = (
      print("====================\n");
      print("Live Graph\n");
-     Graph.printGraph' (fn (nid, {def=def, use=use, move=move,
+     Graph.printGraph'' (fn (nid, {def=def, use=use, move=move,
      li=li, lo=lo}:t_lnode) => (Int.toString nid) ^ 
      "\nlive out: " ^ (ts2s lo) ^
-     "\nlive in: " ^ (ts2s li)) livegraph)
+     "\nlive in: " ^ (ts2s li)) (fn nid=>Int.toString nid) livegraph)
 end
 

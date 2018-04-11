@@ -27,9 +27,10 @@ val ts2s = Temp.ts2s
 fun show flowgraph =(
   println("===================");
   println("Flow Graph");
-  Graph.printGraph' (fn (nid, {def=def, use=use, move=move}:t_node)
+  Graph.printGraph'' (fn (nid, {def=def, use=use, move=move}:t_node)
   => (Int.toString nid) ^ "\ndef: {" ^ (ts2s def)  ^ " }" ^ "\nuse: {" ^
-  (ts2s use) ^ " }" ^ "\nmove: {" ^ (printMove move) ^ " }") flowgraph)
+  (ts2s use) ^ " }" ^ "\nmove: {" ^ (printMove move) ^ " }") (fn
+  nid=>Int.toString nid) flowgraph)
 
 (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
         of the same variable.  If there is a def(x) followed by use(x)
