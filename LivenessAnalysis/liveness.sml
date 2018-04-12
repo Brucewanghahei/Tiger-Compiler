@@ -222,7 +222,7 @@ structure Liveness: LIVENESS = struct
             val fromstr = toString (from, fromtemp)
             val tostr = toString (to, totemp)
         in
-            print (fromstr ^ "-->" ^ tostr ^ "\n")
+            print (fromstr ^ "-" ^ tostr ^ "\n")
         end
       val _ = map Edge2String moves
     in
