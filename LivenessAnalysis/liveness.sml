@@ -189,10 +189,6 @@ structure Liveness: LIVENESS = struct
         let
           val {def=def, use=use, move=move, li=li, lo=lo} = Graph.nodeInfo lnode
           val moves = case move of SOME (move) => move::moves | NONE => moves
-          val () = case move of 
-                        SOME((t1, t2)) => print("move: " ^(Temp.makestring t1) 
-                        ^ "~" ^ (Temp.makestring t2) ^"\n")
-                      | NONE => ()
           val igraph = TSet.foldl (
             fn (liitem1, igraph) => (TSet.foldl (
               fn (liitem2, igraph) => 
