@@ -10,24 +10,24 @@ infix 1 >/ val op>/ = op</ (* Left pipe *)
 
 fun color (instrs, graph, k) =
     let
-        fun simplify (lgraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
-            let fun helper (lgraph, nodeStk, nodeCands) =
+        fun simplify (igraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
+            let fun helper (igraph, nodeStk, nodeCands) =
                     case nodeStk of
-                        nil => (lgraph, nodeStk, nodeCands)
-                     | _ => nodeCands >/ List.filter (fn x => G.degree lgraph x < k)
+                        nil => (igraph, nodeStk, nodeCands)
+                     | _ => nodeCands >/ List.filter (fn x => G.degree igraph x < k)
                                       >/ foldl (fn (node, (g, stk, cands)) =>
                                                    (G.removeNode(graph, G.getNodeID node),
                                                     node::stk,
                                                     cands @ G.adj' g node))
-                                      (lgraph, nodeStk, [])
+                                      (igraph, nodeStk, [])
                                       >/ helper
-                val (lgraph', nodeStk', _) = helper(lgraph, nodeStk, G.nodes lgraph)
+                val (igraph', nodeStk', _) = helper(igraph, nodeStk, G.nodes igraph)
             in
-                coalesce(lgraph', nodeStk')
+                coalesce(igraph', nodeStk')
             end
-        and coalesce (lgraph, nodeStk) =
-        and freeze (lgraph, nodeStk) =
-        and potentialSpill (lgraph, nodeStk) =
+        and coalesce (igraph, nodeStk) =
+        and freeze (igraph, nodeStk) =
+        and potentialSpill (igraph, nodeStk) =
         and select (cgraph: cGraph): bool * cGraph * Temp.temp list =
         and actualSpill (cgraph: cGraph): bool * cGraph * Temp.temp list =
         val nodeStk = simplify(graph, []) >/ #2
