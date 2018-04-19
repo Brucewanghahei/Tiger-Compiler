@@ -20,6 +20,7 @@ fun color (instrs, graph, k) =
                                                     node::stk,
                                                     cands @ G.adj' g node))
                                       (lgraph, nodeStk, [])
+                                      >/ helper
                 val (lgraph', nodeStk', _) = helper(lgraph, nodeStk, G.nodes lgraph)
             in
                 coalesce(lgraph', nodeStk')
