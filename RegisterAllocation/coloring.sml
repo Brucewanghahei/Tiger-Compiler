@@ -10,26 +10,21 @@ infix 1 >/ val op>/ = op</ (* Left pipe *)
 
 fun color (instrs, graph, k) =
     let
-        fun simplify (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
-            let fun helper (graph, nodes) =
-                    let val toRemove = List.filter (fn x => G.degree graph x < k) nodes
-                        val (graph', nodes') = 
-                            foldl (fn (node, (g, nextLevel)) =>
-                                      (G.removeNode(graph, G.getNodeID node)),
-                                   nextLevel @ G.adj' g node)
-                                  (graph, []) toRemove
-                    in
-                        case nodes' of
-                             hd::tl => helper(graph', nodes')
-                           | nil => coalesce graph'
-                    end
+        fun simplify (lgraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
+            let fun helper (lgraph, nodeStk, nodeCands) =
+                    case nodeStk of
+                        nil => (lgraph, nodeStk, nodeCands)
+                     | _ => nodeCands >/ List.filter (fn x => G.degree lgraph x < k)
+                                      >/ foldl (fn (node, (g, stk, cands)) =>
+                                                   (G.removeNode(graph, G.getNodeID node),
+                                                    node::stk,
+                                                    cands @ G.adj' g node))
+                                      (lgraph, nodeStk, [])
+                val (lgraph', nodeStk', _) = helper(lgraph, nodeStk, G.nodes lgraph)
             in
-                helper lgraph (G.nodes lgraph)
+                coalesce(lgraph', nodeStk')
             end
-        fun coalesce (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
-        fun freeze (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
-        fun potentialSpill (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
-        fun select (cgraph: cGraph, tp_head::tp_tail : Temp.temp list): bool * cGraph * Temp.temp list =
+        fun select (cgraph: cGraph, tp_head::tp_tail : Temp.temp list) = 
         let
           val c_node = t2cnode(tp_head)
           val nid = G.getNodeID(c_node) 
@@ -53,12 +48,12 @@ fun color (instrs, graph, k) =
         | select (cgraph, nil) = (false, cgraph, nil)
 
 
-        fun actualSpill (cgraph: cGraph): bool * cGraph * Temp.temp list =
-        fun liveGraph2ColorGraph (lgraph: L.igraph) = 
-        val graph' = simplify graph >/ #2
         fun t2cnode (t: Temp.temp) :t_cnode =
+        and coalesce (lgraph, nodeStk) =
+        and freeze (lgraph, nodeStk) =
+        and potentialSpill (lgraph, nodeStk) =
+        and select (cgraph: cGraph): bool * cGraph * Temp.temp list =
+        and actualSpill (cgraph: cGraph): bool * cGraph * Temp.temp list =
+        val nodeStk = simplify(graph, []) >/ #2
     in
-        (instrs,
-         liveGraph2ColorGraph lGraph') >/ select
-                                       >/ #2
     end
