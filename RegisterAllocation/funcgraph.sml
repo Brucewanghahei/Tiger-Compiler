@@ -116,6 +116,9 @@ fun foldSuccs f init (_,_,s,_) = NodeSet.foldl f init s
 fun foldSuccs' g f init (_,_,s,_) = NodeSet.foldl (fn(nid,x)=>f(getNode(g,nid),x)) init s
 fun foldPreds f init (_,_,_,p) = NodeSet.foldl f init p
 fun foldPreds' g f init (_,_,_,p) = NodeSet.foldl (fn(nid,x)=>f(getNode(g,nid),x)) init p
+fun foldAdjs f init (_,_,s,p) = NodeSet.foldl f init (NodeSet.union(s,p))
+fun foldAdjs' g f init (_,_,s,p) = NodeSet.foldl (fn(nid,x)=>f(getNode(g,nid),x)) init
+  (NodeSet.union(s,p))
 
 
 fun isAdjacent ((n1,_,s1,p1),(n2,_,s2,p2)) = 
