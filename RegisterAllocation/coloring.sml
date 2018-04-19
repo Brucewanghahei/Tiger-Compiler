@@ -29,10 +29,34 @@ fun color (instrs, graph, k) =
         fun coalesce (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
         fun freeze (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
         fun potentialSpill (lgraph: L.igraph): bool * L.igraph * Temp.temp list =
-        fun select (cgraph: cGraph): bool * cGraph * Temp.temp list =
+        fun select (cgraph: cGraph, tp_head::tp_tail : Temp.temp list): bool * cGraph * Temp.temp list =
+        let
+          val c_node = t2cnode(tp_head)
+          val nid = G.getNodeID(c_node) 
+          fun pick_candi_color (color_list: int list) =
+          let
+            fun helper(hd::tl, candi) =
+              if hd = candi then helper(tl, candi+1) else candi
+              | helper(nil, candi) = candi
+          in
+            helper(color_list, 0)
+          end
+          val candi_num = G.adj' cgraph c_node 
+                          >/ map G.nodeInfo
+                          >/ map #2 (* get color_num *)
+                          >/ ListMergeSort.uniqueSort Int.compare (* sort colors *)
+                          >/ pick_candi_color
+          val is_spill:bool = assert(candi_num < k) (* error and exit if >= k *)
+        in
+          (not is_spill, G.changeNodeData(cgraph, nid, (tp_head, candi_num)), tp_tail)
+        end
+        | select (cgraph, nil) = (false, cgraph, nil)
+
+
         fun actualSpill (cgraph: cGraph): bool * cGraph * Temp.temp list =
         fun liveGraph2ColorGraph (lgraph: L.igraph) = 
         val graph' = simplify graph >/ #2
+        fun t2cnode (t: Temp.temp) :t_cnode =
     in
         (instrs,
          liveGraph2ColorGraph lGraph') >/ select
