@@ -135,16 +135,16 @@ fun transgraph (a_graph: 'a graph, trans_f: 'a -> 'b) : 'b graph =
 let
   fun f (inode, cgraph) =
   let
-    val nid = G.getNodeID(inode)
-    val a_info = G.getNodeInfo(inode)
+    val nid = getNodeID(inode)
+    val a_info = nodeInfo(inode)
     val b_info = trans_f(a_info)
-    val succs = G.succs(inode)
-    val preds = G.preds(inode)
+    val succs = succs(inode)
+    val preds = preds(inode)
   in
-    G.setNode(cgraph, nid, b_info, succs, preds)
+    setNode(cgraph, nid, b_info, succs, preds)
   end
 in
- igraph.foldNodes f G.empty igraph
+ foldNodes f empty a_graph
 end
 
 fun printGraph stringify g = 

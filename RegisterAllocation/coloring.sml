@@ -4,6 +4,9 @@ struct
 structure G = Flow.Graph
 structure L = Liveness
 structure F = MipsFrame
+type allocation = F.register Temp.map
+type t_cnode = {tmp: Temp.temp, color: int}
+type cGraph = t_cnode G.graph
 
 (* infix op have to be declared in every module *)
 infixr 3 </ fun x </ f = f x (* Right application *)
@@ -13,7 +16,7 @@ fun extractIgraph (L.IGRAPH{graph, tnode, gtemp, moves}) =
     {graph = graph, tnode = tnode, gtemp = gtemp, moves = moves}
   | extractIgraph _ = ErrorMsg.impossible "extract IGRAPH"
 
-fun updateIgraph L.IGRAPH{graph, tnode, gtemp, moves} graph' =
+fun updateIgraph (L.IGRAPH{graph, tnode, gtemp, moves}) graph' =
     L.IGRAPH{graph = graph',
              (* warning: tnode is not updated! Should not use if coalesce is implemented *)
              tnode = tnode,
@@ -31,7 +34,7 @@ fun color (instrs, k) =
                     >/ #1
         val origin_igrpah = genIGraph(instrs)
         fun igraph2cgraph (igraph: L.igraph) =
-          G.transgraph(igraph, fn tp => (tp, -1))
+          G.transgraph(igraph, fn tp => (tp, ~1))
         fun build(igraph: L.igraph) = 
           simplify(igraph, [])
         and simplify (igraph: L.igraph, nodeStk: t_inode List) =
@@ -126,3 +129,4 @@ fun color (instrs, k) =
            -> (color | regAlloc) *)
         build(instrs)
     end
+end

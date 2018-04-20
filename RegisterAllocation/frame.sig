@@ -15,6 +15,7 @@ sig
   val RA: Temp.temp
   val namedRegs: Temp.temp list
   val argRegs: Temp.temp list
+  val callersaveRegsExtra: Temp.temp list
   val callersaveRegs: Temp.temp list
   val calleesaveRegs: Temp.temp list
 
