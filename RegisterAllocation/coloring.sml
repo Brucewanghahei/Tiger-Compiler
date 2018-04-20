@@ -10,11 +10,18 @@ infixr 3 </ fun x </ f = f x (* Right application *)
 infix 1 >/ val op>/ = op</ (* Left pipe *)
 
 fun extractIgraph (L.IGRAPH{graph, tnode, gtemp, moves}) =
-    {graph, tnode, gtemp, moves}
+    {graph = graph, tnode = tnode, gtemp = gtemp, moves = moves}
   | extractIgraph _ = ErrorMsg.impossible "extract IGRAPH"
 
 fun updateIgraph L.IGRAPH{graph, tnode, gtemp, moves} graph' =
-    L.IGRAPH{graph', tnode, gtemp, moves}
+    L.IGRAPH{graph = graph',
+             (* warning: tnode is not updated! Should not use if coalesce is implemented *)
+             tnode = tnode,
+             gtemp = gtemp,
+             moves = moves >/ List.filter (fn (x, y) =>
+                                              G.hasNode(graph', x)
+                                              andalso G.hasNode(graph', y))
+            }
 
 fun color (instrs, k) =
     let
