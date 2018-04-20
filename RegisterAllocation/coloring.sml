@@ -25,15 +25,13 @@ fun updateIgraph L.IGRAPH{graph, tnode, gtemp, moves} graph' =
 
 fun color (instrs, k) =
     let
-        fun build (instrs) = 
-            let
-                val igraph = 
+        fun genIGraph(instrs) = 
                     instrs >/ MakeGraph.instrs2graph
                     >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
                     >/ #1
-            in
-                simplify(igraph, [])
-            end
+        val origin_igrpah = genIGraph(instrs)
+        fun build(igraph: L.igraph) = 
+          simplify(igraph, [])
         and simplify (igraph: L.igraph, nodeStk: t_inode List) =
             let val {graph, ...} = extractIgraph igraph
                 fun helper (graph, nodeStk, nodeCands) =
@@ -114,8 +112,9 @@ fun color (instrs, k) =
                                                n 
                                                >/ G.nodeInfo 
                                                >/ #2
-                                               >/ fn x =>
-                                                 IntBinaryMap.find(cnumRegMap, x)  
+                                               >/ (fn x =>
+                                                 IntBinaryMap.find(cnumRegMap,
+                                                 x))
                                          )
           ) Temp.Map.empty cGraph 
         end
