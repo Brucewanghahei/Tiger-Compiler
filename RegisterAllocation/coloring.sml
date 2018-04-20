@@ -94,6 +94,25 @@ fun color (instrs, k) =
         and actualSpill (cgraph: cGraph)  =
             (instrs, regAlloc(cgraph)) 
         and regAlloc (cgraph: cGraph) =
+        let
+          val regList = [F.s0, F.s1, F.s2, F.s3, F.s4, F.s5, F.s6, F.s7,
+                         F.t0, F.t1, F.t2, F.t3, F.t4, F.t5, F.t6, F.t7,
+                         F.t8, F.t9]
+          val cnumList = List.tabulate(18, fn x => x)
+          val cnumRegMap = ListPair.foldl (fn (reg, cnum, mp) =>
+          IntBinaryMap.insert(mp, cnum, Frame.temp2str reg)) (Temp.temp IntBinaryMap.empty)
+          (regList, cnumList)
+        in
+          G.foldNodes 
+          (fn (n, tbl) => Temp.Map.insert(tbl, n >/ G.nodeInfo >/ #1, 
+                                               n 
+                                               >/ G.nodeInfo 
+                                               >/ #2
+                                               >/ fn x =>
+                                                 IntBinaryMap.find(cnumRegMap, x)  
+                                         )
+          ) Temp.Map.empty cGraph 
+        end
         val nodeStk = simplify(graph, []) >/ #2
     in
         (* build -> simplify -> coalesce -> freeze 
