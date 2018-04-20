@@ -9,6 +9,13 @@ structure F = MipsFrame
 infixr 3 </ fun x </ f = f x (* Right application *)
 infix 1 >/ val op>/ = op</ (* Left pipe *)
 
+fun extractIgraph (L.IGRAPH{graph, tnode, gtemp, moves}) =
+    {graph, tnode, gtemp, moves}
+  | extractIgraph _ = ErrorMsg.impossible "extract IGRAPH"
+
+fun updateIgraph L.IGRAPH{graph, tnode, gtemp, moves} graph' =
+    L.IGRAPH{graph', tnode, gtemp, moves}
+
 fun color (instrs, k) =
     let
         fun build (instrs) = 
@@ -21,19 +28,20 @@ fun color (instrs, k) =
           simplify (igraph, [])
         end
         and simplify (igraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
-            let fun helper (igraph, nodeStk, nodeCands) =
+            let val {graph, ...} = extractIgraph igraph
+                fun helper (graph, nodeStk, nodeCands) =
                     case nodeStk of
-                        nil => (igraph, nodeStk, nodeCands)
-                     | _ => nodeCands >/ List.filter (fn x => G.degree igraph x < k)
+                        nil => (graph, nodeStk, nodeCands)
+                     | _ => nodeCands >/ List.filter (fn x => G.degree graph x < k)
                                       >/ foldl (fn (node, (g, stk, cands)) =>
                                                    (G.removeNode(graph, G.getNodeID node),
                                                     node::stk,
                                                     cands @ G.adj' g node))
-                                      (igraph, nodeStk, [])
+                                      (graph, nodeStk, [])
                                       >/ helper
-                val (igraph', nodeStk', _) = helper(igraph, nodeStk, G.nodes igraph)
+                val (graph', nodeStk', _) = helper(graph, nodeStk, G.nodes graph)
             in
-                coalesce(igraph', nodeStk')
+                coalesce(updateIgraph igraph graph', nodeStk')
             end
         and coalesce (igraph, nodeStk) =
           freeze (igraph, nodeStk)
