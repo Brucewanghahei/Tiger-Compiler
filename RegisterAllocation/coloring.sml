@@ -56,8 +56,7 @@ fun color (instrs, k) =
             let
                 val {graph, ...} = extractIgraph igraph
                 val nList = G.nodes(graph)
-                exception EmptyNodesList
-                fun MaxDegree [] = raise EmptyNodesList
+                fun MaxDegree [] = ErrorMsg.impossible "empty IGraph NodeList"
                     | MaxDegree [h] = h
                     | MaxDegree (h::l) =
                         let
