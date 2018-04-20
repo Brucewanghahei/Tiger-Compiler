@@ -49,7 +49,8 @@ fun color (instrs, k) =
             potentialSpill (igraph, nodeStk)
         and potentialSpill (igraph, nodeStk) =
             let
-                val nList = G.nodes(igraph)
+                val {graph, ...} = extractIgraph igraph
+                val nList = G.nodes(graph)
                 exception EmptyNodesList
                 fun MaxDegree [] = raise EmptyNodesList
                     | MaxDegree [h] = h
@@ -62,9 +63,9 @@ fun color (instrs, k) =
                         end
                 val snode = MaxDegree nList
                 val newStk = snode::nodeStk
-                val newGraph = G.removeNode(igrah, G.getNodeID(snode))
+                val newGraph = G.removeNode(graph, G.getNodeID(snode))
             in
-                (newGraph, newStk)
+                (updateIgraph igraph newGraph, newStk)
             end
         and select (cgraph: cGraph, cnode_head::cnode_tail : t_cnode List) = 
             let
