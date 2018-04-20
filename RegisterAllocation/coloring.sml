@@ -3,14 +3,24 @@ struct
 
 structure G = Flow.Graph
 structure L = Liveness
+structure F = MipsFrame
 
 (* infix op have to be declared in every module *)
 infixr 3 </ fun x </ f = f x (* Right application *)
 infix 1 >/ val op>/ = op</ (* Left pipe *)
 
-fun color (instrs, graph, k) =
+fun color (instrs, k) =
     let
-        fun simplify (igraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
+        fun build (instrs) = 
+        let
+          val igraph = 
+          instrs >/ MakeGraph.instrs2graph
+                 >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
+                 >/ #1
+        in
+          simplify (igraph, [])
+        end
+        and simplify (igraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
             let fun helper (igraph, nodeStk, nodeCands) =
                     case nodeStk of
                         nil => (igraph, nodeStk, nodeCands)
@@ -26,12 +36,14 @@ fun color (instrs, graph, k) =
                 coalesce(igraph', nodeStk')
             end
         and coalesce (igraph, nodeStk) =
+          freeze (igraph, nodeStk)
         and freeze (igraph, nodeStk) =
+          potentialSpill (igraph, nodeStk)
         and potentialSpill (igraph, nodeStk) =
-        fun select (cgraph: cGraph, tp_head::tp_tail : Temp.temp list) = 
+        and select (cgraph: cGraph, cnode_head::cnode_tail : t_cnode List) = 
         let
-          val c_node = t2cnode(tp_head)
-          val nid = G.getNodeID(c_node) 
+          val nid = G.getNodeID(cnode_head) 
+          val (c_temp, c_num) = G.nodeInfo(cnode_head)
           fun pick_candi_color (color_list: int list) =
           let
             fun helper(hd::tl, candi) =
@@ -40,20 +52,27 @@ fun color (instrs, graph, k) =
           in
             helper(color_list, 0)
           end
-          val candi_num = G.adj' cgraph c_node 
+          val candi_num = G.adj' cgraph cnode_head 
                           >/ map G.nodeInfo
                           >/ map #2 (* get color_num *)
                           >/ ListMergeSort.uniqueSort Int.compare (* sort colors *)
                           >/ pick_candi_color
-          val is_spill:bool = assert(candi_num < k) (* error and exit if >= k *)
+          val _ = assert(candi_num < k) (* error and exit if >= k *)
+
+          val new_cgraph = G.changeNodeData(cgraph, nid, (c_temp, candi_num))
         in
-          (not is_spill, G.changeNodeData(cgraph, nid, (tp_head, candi_num)), tp_tail)
+          select (new_cgraph, cnode_tail)
         end
-        | select (cgraph, nil) = (false, cgraph, nil)
-
-
+        | select (cgraph, nil) = actualSpill cgraph (* some nodes may have color
+        num =-1 or >= k *)
         and t2cnode (t: Temp.temp) :t_cnode =
-        and actualSpill (cgraph: cGraph): bool * cGraph * Temp.temp list =
+        and actualSpill (cgraph: cGraph)  =
+          (instrs, regAlloc(cgraph)) 
+        and regAlloc (cgraph: cGraph) =
         val nodeStk = simplify(graph, []) >/ #2
     in
+        (* build -> simplify -> coalesce -> freeze 
+           -> potentialSpill -> select -> actualSpill
+           -> (color | regAlloc) *)
+        build(instrs)
     end

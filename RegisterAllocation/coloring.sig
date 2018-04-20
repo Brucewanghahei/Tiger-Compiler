@@ -2,7 +2,9 @@ signature COLORING =
 sig
     structure G: FUNCGRAPH
     structure L: LIVENESS
+    structure F: FRAME
+    type allocation = Frame.register Temp.Table.table
     type t_cnode = {tmp: Temp.temp, color: int}
     type cGraph = t_cnode G.graph
-    val color: Assem.instr list * L.igraph * int -> cGraph
+    val color: Assem.instr list * int -> Assem.instr list * allocation
 end
