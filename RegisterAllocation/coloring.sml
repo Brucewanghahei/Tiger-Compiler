@@ -53,7 +53,17 @@ fun color (instrs, k) =
         and coalesce (igraph, nodeStk) =
             freeze (igraph, nodeStk)
         and freeze (igraph, nodeStk) =
-            potentialSpill (igraph, nodeStk)
+            let val {graph, moves} = extractIgraph igraph
+            in
+                case moves of
+                    (from, to)::tl => simplify (updateIgraph igraph
+                                                             (G.removeEdge
+                                                                  graph
+                                                                  {from = G.getNodeID from,
+                                                                   to = G.getNodeID to}),
+                                                nodeStk)
+                  | nil => potentialSpill (igraph, nodeStk)
+            end
         and potentialSpill (igraph, nodeStk) =
             let
                 val {graph, ...} = extractIgraph igraph
