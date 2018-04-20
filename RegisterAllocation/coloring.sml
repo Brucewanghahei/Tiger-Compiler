@@ -32,20 +32,9 @@ fun color (instrs, k) =
                     >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
                     >/ #1
             in
-                let fun helper (igraph, nodeStk) =
-                        let {igraph', nodeStk'} = simplify(igraph, nodeStk)
-                            val {graph, ...} = extractIgraph igraph'
-                        in
-                            case G.nodes graph of
-                                hd::tl => simplify(igraph', nodeStk')
-                              | nil => (igraph', nodeStk')
-                        end
-                    val (igraph', nodeStk') = helper(igraph, [])
-                in
-                    select(G.empty, nodeStk', igraph')
-                end
+                simplify(igraph, [])
             end
-        and simplify (igraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
+        and simplify (igraph: L.igraph, nodeStk: t_inode List) =
             let val {graph, ...} = extractIgraph igraph
                 fun helper (graph, nodeStk, nodeCands) =
                     case nodeStk of
@@ -83,7 +72,9 @@ fun color (instrs, k) =
                 val newStk = snode::nodeStk
                 val newGraph = G.removeNode(graph, G.getNodeID(snode))
             in
-                (updateIgraph igraph newGraph, newStk)
+                case G.nodes newGraph of
+                    hd::tl => simplify(updateIgraph igraph newGraph, newStk)
+                  | nil => select(G.empty, newStk)
             end
         and select (cgraph: cGraph, cnode_head::cnode_tail : t_cnode List) = 
             let
