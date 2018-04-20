@@ -93,7 +93,7 @@ fun color (instrs, k) =
                     >/ ListMergeSort.uniqueSort Int.compare (* sort colors *)
                     >/ pick_candi_color
                 val _ = assert(candi_num < k) (* error and exit if >= k *)
-                val new_cgraph = G.changeNodeData(cgraph, nid, (c_temp, candi_num))
+                val new_cgraph = G.changeNodeData(cgraph, nid, (i_temp, candi_num))
             in
                 select (new_cgraph, cnode_tail)
             end
