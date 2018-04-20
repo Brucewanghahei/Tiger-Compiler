@@ -106,6 +106,8 @@ val foldPreds':'a graph -> (('a node * 'b) -> 'b) -> 'b -> 'a node -> 'b
 
 val isAdjacent: 'a node * 'a node -> bool
 
+val transgraph: ('a graph * 'a -> 'b) -> 'b graph
+
 (* debugging*)
 
 (* print the graph.  Give it a function

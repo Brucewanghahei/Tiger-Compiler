@@ -30,6 +30,8 @@ fun color (instrs, k) =
                     >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
                     >/ #1
         val origin_igrpah = genIGraph(instrs)
+        fun igraph2cgraph (igraph: L.igraph) =
+          G.transgraph(igraph, fn tp => (tp, -1))
         fun build(igraph: L.igraph) = 
           simplify(igraph, [])
         and simplify (igraph: L.igraph, nodeStk: t_inode List) =
@@ -72,12 +74,12 @@ fun color (instrs, k) =
             in
                 case G.nodes newGraph of
                     hd::tl => simplify(updateIgraph igraph newGraph, newStk)
-                  | nil => select(G.empty, newStk)
+                  | nil => select(igraph2cgraph origin_igrpah, newStk)
             end
-        and select (cgraph: cGraph, cnode_head::cnode_tail : t_cnode List) = 
+        and select (cgraph: cGraph, inode_head::inode_tail : t_inode List) = 
             let
-                val nid = G.getNodeID(cnode_head) 
-                val (c_temp, c_num) = G.nodeInfo(cnode_head)
+                val nid = G.getNodeID(inode_head) 
+                val i_temp = G.nodeInfo(inode_head)
                 fun pick_candi_color (color_list: int list) =
                     let
                         fun helper(hd::tl, candi) =

@@ -131,6 +131,22 @@ fun isAdjacent ((n1,_,s1,p1),(n2,_,s2,p2)) =
   NodeSet.member(NodeSet.union(s1,p1),n2) orelse
   NodeSet.member(NodeSet.union(s2,p2),n1)
 
+fun transgraph (a_graph: 'a graph, trans_f: 'a -> 'b) : 'b graph =
+let
+  fun f (inode, cgraph) =
+  let
+    val nid = G.getNodeID(inode)
+    val a_info = G.getNodeInfo(inode)
+    val b_info = trans_f(a_info)
+    val succs = G.succs(inode)
+    val preds = G.preds(inode)
+  in
+    G.setNode(cgraph, nid, b_info, succs, preds)
+  end
+in
+ igraph.foldNodes f G.empty igraph
+end
+
 fun printGraph stringify g = 
     let fun println x = print(x ^"\n")
 	fun stringNid nid = 
