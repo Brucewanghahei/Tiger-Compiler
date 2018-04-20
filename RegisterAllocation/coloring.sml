@@ -32,7 +32,18 @@ fun color (instrs, k) =
                     >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
                     >/ #1
             in
-                simplify (igraph, [])
+                let fun helper (igraph, nodeStk) =
+                        let {igraph', nodeStk'} = simplify(igraph, nodeStk)
+                            val {graph, ...} = extractIgraph igraph'
+                        in
+                            case G.nodes graph of
+                                hd::tl => simplify(igraph', nodeStk')
+                              | nil => (igraph', nodeStk')
+                        end
+                    val (igraph', nodeStk') = helper(igraph, [])
+                in
+                    select(G.empty, nodeStk', igraph')
+                end
             end
         and simplify (igraph: L.igraph, nodeStk: t_inode List): L.igraph * t_inode list =
             let val {graph, ...} = extractIgraph igraph
@@ -107,7 +118,6 @@ fun color (instrs, k) =
                 select (new_cgraph, cnode_tail)
             end
             | select (cgraph, nil) = actualSpill cgraph (* some nodes may have color num =-1 or >= k *)
-        and t2cnode (t: Temp.temp) :t_cnode =
         and actualSpill (cgraph: cGraph)  =
             (instrs, regAlloc(cgraph)) 
         and regAlloc (cgraph: cGraph) =
