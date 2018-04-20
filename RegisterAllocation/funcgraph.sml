@@ -23,6 +23,12 @@ exception NoSuchEdge of nodeID * nodeID
 
 
 val empty = NodeMap.empty
+
+fun hasNode(g, (nid, _, _, _)) =
+    case NodeMap.find(g, nid) of
+        SOME _ => true
+      | NONE => false
+
 fun getNode(g,nid) = case NodeMap.find(g,nid) of
 			 NONE => raise NoSuchNode(nid)
 		       | SOME x=> x
