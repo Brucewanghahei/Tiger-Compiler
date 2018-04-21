@@ -1,10 +1,10 @@
-structure Coloring =
+structure Color =
 struct
 
 structure G = Flow.Graph
 structure L = Liveness
 structure F = MipsFrame
-type allocation = F.register Temp.map
+type allocation = string Temp.map
 type t_cnode = Temp.temp * int (* tmp, color *)
 type t_inode = L.t_inode 
 type cGraph = t_cnode G.graph
@@ -33,8 +33,11 @@ fun assert (exp, msg) =
   if (exp) then ErrorMsg.impossible msg
   else ()
 
-fun color (instrs, k) =
+fun color (instrs: Assem.instr list,
+           initAllocation: allocation,
+           registers: Temp.temp list) =
     let
+        val k = List.length registers
         fun genIGraph(instrs) = 
                     instrs >/ MakeGraph.instrs2graph
                     >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
@@ -117,11 +120,10 @@ fun color (instrs, k) =
             (instrs, regAlloc(cgraph)) 
         and regAlloc (cgraph: cGraph) =
         let
-          val regList = F.callersaveRegsExtra @ F.callersaveRegs @ F.calleesaveRegs
-          val cnumList = List.tabulate(18, fn x => x)
+          val cnumList = List.tabulate(k, fn x => x)
           val cnumRegMap = ListPair.foldl (fn (reg, cnum, mp) =>
           IntBinaryMap.insert(mp, cnum, F.temp2str reg)) IntBinaryMap.empty
-          (regList, cnumList)
+          (registers, cnumList)
         in
           G.foldNodes 
           (fn (n, tbl) => Temp.Map.insert(tbl, n >/ G.nodeInfo >/ #1, 
@@ -129,14 +131,12 @@ fun color (instrs, k) =
                                                >/ G.nodeInfo 
                                                >/ #2
                                                >/ (fn x =>
-                                                 IntBinaryMap.find(cnumRegMap,
-                                                 x))
+                                                      case IntBinaryMap.find(cnumRegMap, x) of
+                                                          SOME v => v
+                                                        | NONE => ErrorMsg.impossible "Registers allocation failed")
                                          )
-          ) Temp.Map.empty cgraph 
+          ) initAllocation cgraph
         end
-        (*
-        val nodeStk = simplify(graph, []) >/ #2
-        *)
     in
         (* build -> simplify -> coalesce -> freeze 
            -> potentialSpill -> select -> actualSpill

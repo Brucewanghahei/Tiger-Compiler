@@ -1,10 +1,10 @@
-signature COLORING =
+signature COLOR =
 sig
     structure G: FUNCGRAPH
     structure L: LIVENESS
     structure F: FRAME
-    type allocation = F.register Temp.map
-    type t_cnode = {tmp: Temp.temp, color: int}
-    type cGraph = t_cnode G.graph
+    type allocation
+    type t_cnode
+    type cGraph
     val color: Assem.instr list * int -> Assem.instr list * allocation
 end
