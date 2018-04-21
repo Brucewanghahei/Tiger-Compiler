@@ -30,7 +30,10 @@ fun hasNode(g, (nid, _, _, _)) =
       | NONE => false
 
 fun getNode(g,nid) = case NodeMap.find(g,nid) of
-			 NONE => raise NoSuchNode(nid)
+                (*
+                * NONE => raise NoSuchNode(nid)
+                *)
+                 NONE => ErrorMsg.impossible ("NoSuchNode") 
 		       | SOME x=> x
 
 fun setNode(g,nid,d,succs,preds) =

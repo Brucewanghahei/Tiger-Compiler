@@ -18,6 +18,7 @@ sig
   val callersaveRegsExtra: Temp.temp list
   val callersaveRegs: Temp.temp list
   val calleesaveRegs: Temp.temp list
+  val user_registers: Temp.temp list
 
   val wordSize: int
   val exp : access -> Tree.exp -> Tree.exp

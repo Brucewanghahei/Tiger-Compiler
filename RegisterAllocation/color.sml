@@ -30,7 +30,7 @@ fun updateIgraph (L.IGRAPH{graph, tnode, gtemp, moves}) graph' =
             }
 
 fun assert (exp, msg) = 
-  if (exp) then ErrorMsg.impossible msg
+  if (not exp) then ErrorMsg.impossible msg
   else ()
 
 fun color (instrs: Assem.instr list,
@@ -42,7 +42,19 @@ fun color (instrs: Assem.instr list,
                     instrs >/ MakeGraph.instrs2graph
                     >/ Liveness.interferenceGraph (* return (igraph, lgraph) *)
                     >/ #1
-        val origin_igrpah = genIGraph(instrs)
+        (* remove precolored temp from origin_igraph *)
+        val origin_igrpah = 
+        let
+          val igraph = genIGraph(instrs)
+          val {graph, ...} = extractIgraph igraph
+          val new_graph = 
+          G.foldNodes (fn (node, g) => case Temp.Map.find(initAllocation, node >/
+          G.nodeInfo) of
+               SOME(_) => G.remove(g, node) | NONE => g) 
+               graph graph
+        in
+          updateIgraph igraph new_graph
+        end
         fun igraph2cgraph (igraph: L.igraph) :cGraph =
         let
           val {graph, ...} = extractIgraph igraph
@@ -50,19 +62,51 @@ fun color (instrs: Assem.instr list,
           G.transgraph(graph, fn tp => (tp, ~1))
         end
         fun build(igraph: L.igraph) = 
+          (print("build\n");
           simplify(igraph, [])
+          )
         and simplify (igraph: L.igraph, nodeStk: t_inode list) =
-            let val {graph, ...} = extractIgraph igraph
+            let 
+                val _ = print("simplify\n")
+              fun n2s n = Int.toString (G.getNodeID n)
+                val {graph, ...} = extractIgraph igraph
+                val cnt = ref 0
                 fun helper (graph, nodeStk, nodeCands) =
-                    case nodeStk of
+                    (print("helper\n");
+                    cnt := !cnt + 1;
+                    if ( (!cnt) > 20) then ErrorMsg.impossible "too much helper"
+                    else ();
+                    case nodeCands of
                         nil => (graph, nodeStk, nodeCands)
-                     | _ => nodeCands >/ List.filter (fn x => G.degree x < k)
+                     | _ => nodeCands >/ List.filter (fn x => G.degree x < k
+              andalso G.hasNode(graph, x))
+                                      >/ map (fn x => (print(Int.toString
+                                      (G.getNodeID x) ^ " " ); x))
                                       >/ foldl (fn (node, (g, stk, cands)) =>
-                                                   (G.removeNode(graph, G.getNodeID node),
+                                      (print("foldling on " ^ (Int.toString
+                                      (G.getNodeID node) ^ "\n"));
+                                       G.foldNodes (fn (n,_)=>print(n2s(n))) ()
+                                       g;
+                                      case G.hasNode(g, node) of 
+                                          true =>
+                                                  (print("true\n");
+                                                  G.adj' g (G.getNode(g,
+                                                  G.getNodeID node));
+                                                  print("safe true\n");
+                                                   (G.removeNode(g, G.getNodeID node),
                                                     node::stk,
-                                                    cands @ G.adj' g node))
+                                                    cands @ G.adj' g
+                                                    (G.getNode(g, G.getNodeID
+                                                    node)))
+                                                    )
+                                        | false =>
+                                                   (g,
+                                                   stk,
+                                                   cands)
+                                      ))
                                       (graph, nodeStk, [])
                                       >/ helper
+                    )
                 val (graph', nodeStk', _) = helper(graph, nodeStk, G.nodes graph)
             in
                 coalesce(updateIgraph igraph graph', nodeStk')
@@ -73,6 +117,7 @@ fun color (instrs: Assem.instr list,
             potentialSpill (igraph, nodeStk)
         and potentialSpill (igraph, nodeStk) =
             let
+                val _ = print("potentialSpill\n")
                 val {graph, ...} = extractIgraph igraph
                 val nList = G.nodes(graph)
                 fun MaxDegree [] = ErrorMsg.impossible "empty IGraph NodeList"
@@ -84,17 +129,33 @@ fun color (instrs: Assem.instr list,
                         in
                             if x > y then h else (MaxDegree l)
                         end
+                        (*
                 val snode = MaxDegree nList
                 val newStk = snode::nodeStk
                 val newGraph = G.removeNode(graph, G.getNodeID(snode))
+                *)
             in
-                case G.nodes newGraph of
-                    hd::tl => simplify(updateIgraph igraph newGraph, newStk)
-                  | nil => select(igraph2cgraph origin_igrpah, newStk)
+              (*
+                case g.nodes newgraph of
+                    hd::tl => simplify(updateIgraph igraph newgraph, newstk)
+                  | nil => select(igraph2cgraph origin_igrpah, newstk)
+                  *)
+                case nList of
+                    hd::tl =>
+                      let 
+                        val _ = print("nList: " ^ Int.toString (List.length nList) ^ "\n")
+                        val snode = MaxDegree nList
+                        val newStk = snode::nodeStk
+                        val newGraph = G.removeNode(graph, G.getNodeID(snode))
+                      in
+                        simplify(updateIgraph igraph newGraph, newStk)
+                      end
+                  | nil => select(igraph2cgraph origin_igrpah, nodeStk)
             end
         and select (cgraph: cGraph, inode_head::inode_tail :t_inode list) = 
             let
                 val nid = G.getNodeID(inode_head) 
+                val _ = print(Int.toString nid)
                 val cnode = G.getNode(cgraph, nid)
                 val i_temp = G.nodeInfo(inode_head)
                 fun pick_candi_color (color_list: int list) =
@@ -110,6 +171,7 @@ fun color (instrs: Assem.instr list,
                     >/ map #2 (* get color_num *)
                     >/ ListMergeSort.uniqueSort Int.compare (* sort colors *)
                     >/ pick_candi_color
+                val _ = print("candi_num: " ^ (Int.toString candi_num) ^ "\n")
                 val _ = assert(candi_num < k, "actual spill") (* error and exit if >= k *)
                 val new_cgraph = G.changeNodeData(cgraph, nid, (i_temp, candi_num))
             in
@@ -117,7 +179,9 @@ fun color (instrs: Assem.instr list,
             end
             | select (cgraph, nil) = actualSpill cgraph (* some nodes may have color num =-1 or >= k *)
         and actualSpill (cgraph: cGraph)  =
-            (instrs, regAlloc(cgraph)) 
+            (print("actuallSpill\n");
+            (instrs, regAlloc(cgraph))
+            )
         and regAlloc (cgraph: cGraph) =
         let
           val cnumList = List.tabulate(k, fn x => x)
@@ -143,4 +207,13 @@ fun color (instrs: Assem.instr list,
            -> (color | regAlloc) *)
         build(origin_igrpah)
     end
+
+fun print_cgraph(cgraph:cGraph) = 
+  G.foldNodes (fn (cnode, _) => let val (tp, cn) = G.nodeInfo(cnode) in print(F.temp2str
+  tp ^ " " ^ (Int.toString cn)) end) () cgraph
+
+fun print_regAlloc(alloc_map:allocation) =
+Temp.Map.appi (fn (tp, reg) => print(F.temp2str tp ^ " " ^ reg ^"\n"))
+alloc_map
+
 end

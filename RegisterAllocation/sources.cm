@@ -35,5 +35,5 @@ flowgraph.sml
 makegraph.sml
 liveness.sig
 liveness.sml
-coloring.sig
-coloring.sml
+color.sig
+color.sml
