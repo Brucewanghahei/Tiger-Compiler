@@ -161,7 +161,8 @@ fun color (instrs: Assem.instr list,
                 fun pick_candi_color (color_list: int list) =
                     let
                         fun helper(hd::tl, candi) =
-                            if hd = candi then helper(tl, candi+1) else candi
+                            if hd = candi then helper(tl, candi+1) else
+                              helper(tl, candi)
                         | helper(nil, candi) = candi
                     in
                         helper(color_list, 0)
