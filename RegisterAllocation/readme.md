@@ -1,7 +1,7 @@
 Register Allocation
 ===
 
-Flow
+Control Flow
 ---
 ```
                     |-----|--future--|--future--|                      |---|
@@ -11,14 +11,19 @@ color --> build --> simplify --> coalesce --> freeze --> potential --> select --
  |___________________________________(in the future)_______________________________________|
 ```
 
-No Coalesce, no move edge
+Our register allocation is implemented just as the graph above, each component is just a function.
+The last expression of every function is just a function call which might diverge with condition,
+connecting another component, like an edge in the graph.
 
-Optimize instrs printing format
+## Notes
+- These modules have not been implemented: `coalesce`, `freeze`, `actual spill`
 
+- Since coalesce have not been implemented, we merge `freeze` into `simplify`,
+which means that instead remove move edges one by one in `freeze`, we ignore move edges and try to simplify all nodes in `simplify`.
 
-In the future, consider distinguishing caller save and callee save registers. Because the interference graph is not global (each frame has its own interference graph)
+- Optimized instrs printing format
 
-
+- In the future, consider distinguishing caller save and callee save registers. Because the interference graph is not global (each frame has its own interference graph)
 
 We also output the register allocation table. Each table contains a default mapping as the table below shows.
 ```
