@@ -39,6 +39,7 @@ let
   (* generote assembly *)
   fun gs oper =
   let
+    (*
     fun dtsh shamt = " $rd, $rt, " ^ (shamt) ^ "\n"
     val dst = " $rd, $rs, $rt\n"
     val st = " $rs, $rt\n"
@@ -51,6 +52,19 @@ let
     fun  ti imm = " $rt, " ^ (imm) ^ "\n"
     fun a addr  = " " ^ (addr) ^ "\n"
     fun da addr = " $rd, " ^ addr  ^ "\n"
+      *)
+    fun dtsh shamt = " `d0, `s0, " ^ (shamt) ^ "\n"
+    val dst = " `d0, `s0, `s1\n"
+    val st = " `s0, `s1\n"
+    val d = " `d0\n"
+    val s = " `s0\n"
+    fun sti lbl = " `s0, `s1, " ^ (lbl) ^ "\n"
+    fun tsi imm = " `d0, `s0, " ^ (imm) ^ "\n"
+    fun tis imm = " `d0, " ^ (imm) ^"(`s0)\n"
+    fun  si lbl = " `s0, " ^ (lbl) ^ "\n" 
+    fun  ti imm = " `s0, " ^ (imm) ^ "\n"
+    fun a addr  = " " ^ (addr) ^ "\n"
+    fun da addr = " `d0, " ^ addr  ^ "\n"
   in
     case oper of 
        ("sll" | "srl" | "sra")
@@ -141,7 +155,7 @@ let
             ))
   	| munchExp (T.MEM(T.CONST i)) =
       result(fn r => ero(
-                        "lw $rt " ^ int i ^ "($zero)\n",
+                        "lw `d0, " ^ int i ^ "($zero)\n",
 			            [],
 			            [r],
                         NONE))
@@ -176,9 +190,9 @@ let
     | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
     ero((gs "sw")(int i), [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) =
-    ero("sw $rt, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
+    ero("sw `d0, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
-    ero("sw $rt, 0($rs)\n", [munchExp e2], [], NONE)
+    ero("sw `d0, 0(`s0)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
     ero((gs "li" (int i)) , [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.BINOP(T.PLUS, T.CONST i, e1))) =
@@ -186,7 +200,7 @@ let
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
     ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
-      erm("add $rd $rs $zero\n", t, munchExp e2)
+      erm("add `d0, `s0, $zero\n", t, munchExp e2)
   	| munchStm (T.LABEL lab) =
     erl((Symbol.name lab) ^ ":\n", lab)
     (* return value of call isn't needed *)
