@@ -4,7 +4,7 @@ Register Allocation
 Flow
 ---
 ```
-                    |-----|--future--|--future--|                      |---|
+                    |---->|<-future--|<-future--|                      |-->|
                     |     +          |          |                      |   +
 color --> build --> simplify --> coalesce --> freeze --> potential --> select --> actual (regAlloc) -->
  ^                        ^_________________________________|                              |
@@ -13,13 +13,16 @@ color --> build --> simplify --> coalesce --> freeze --> potential --> select --
 
 No Coalesce, no move edge
 
-Optimize instrs printing format
+Assembly Output
+---
+We optimized assembly instructions' printing. Now it can output formatted assembly strings (before register allocation)
 
-
+Reg-Alloc about caller/callee save registers
+---
 In the future, consider distinguishing caller save and callee save registers. Because the interference graph is not global (each frame has its own interference graph)
 
-
-
+Output of register allocation
+---
 We also output the register allocation table. Each table contains a default mapping as the table below shows.
 ```
 =========================
