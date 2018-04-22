@@ -144,7 +144,7 @@ let
     result(fn r => ero((gs "li" (int i)), [], [r], NONE))
   	| munchExp (T.TEMP t) = t
   	| munchExp (T.NAME n) =
-    result(fn r => ero((gs "la" (Symbol.name n)), [], [], NONE))
+    result(fn r => ero((gs "la" (Symbol.name n)), [], [r], NONE))
 
     | munchExp ((T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)))
   	           | (T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)))) =
