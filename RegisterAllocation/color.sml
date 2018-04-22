@@ -71,20 +71,20 @@ fun color (instrs: Assem.instr list,
                     case nodeCands of
                         nil => (graph, nodeStk, nodeCands)
                      | _ => nodeCands >/ List.filter (fn x => G.degree x < k
-              andalso G.hasNode(graph, x))
+                                                              andalso G.hasNode(graph, x))
                                       >/ foldl (fn (node, (g, stk, cands)) =>
-                                      case G.hasNode(g, node) of 
-                                          true =>
-                                                   (G.removeNode(g, G.getNodeID node),
-                                                    node::stk,
-                                                    cands @ G.adj' g
-                                                    (G.getNode(g, G.getNodeID
-                                                    node)))
-                                        | false =>
-                                                   (g,
-                                                   stk,
-                                                   cands)
-                                      )
+                                                   case G.hasNode(g, node) of 
+                                                       true =>
+                                                       (G.removeNode(g, G.getNodeID node),
+                                                        node::stk,
+                                                        cands @ G.adj' g
+                                                                       (G.getNode(g, G.getNodeID
+                                                                                         node)))
+                                                     | false =>
+                                                       (g,
+                                                        stk,
+                                                        cands)
+                                               )
                                       (graph, nodeStk, [])
                                       >/ helper
                 val (graph', nodeStk', _) = helper(graph, nodeStk, G.nodes graph)
