@@ -27,6 +27,7 @@ structure Assem = struct
 		  | f( #"`":: _ :: rest) = ErrorMsg.impossible "bad Assem format"
 		  | f(c :: rest) = (c :: f rest)
 		  | f nil = nil
+          handle General.Subscript => (print "sss"; nil)
 	    in implode(f(explode assem))
 	    end
       in fn OPER{assem,dst,src,jump=NONE} => speak(assem,dst,src,nil)

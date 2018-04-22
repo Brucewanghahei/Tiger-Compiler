@@ -155,7 +155,7 @@ fun color (instrs: Assem.instr list,
         and select (cgraph: cGraph, inode_head::inode_tail :t_inode list) = 
             let
                 val nid = G.getNodeID(inode_head) 
-                val _ = print(Int.toString nid)
+                val _ = print("select\n")
                 val cnode = G.getNode(cgraph, nid)
                 val i_temp = G.nodeInfo(inode_head)
                 fun pick_candi_color (color_list: int list) =
@@ -172,7 +172,7 @@ fun color (instrs: Assem.instr list,
                     >/ map #2 (* get color_num *)
                     >/ ListMergeSort.uniqueSort Int.compare (* sort colors *)
                     >/ pick_candi_color
-                val _ = print("candi_num: " ^ (Int.toString candi_num) ^ "\n")
+                val _ = print("nid: " ^ Int.toString nid ^ ", candi_num: " ^ (Int.toString candi_num) ^ "\n")
                 val _ = assert(candi_num < k, "actual spill") (* error and exit if >= k *)
                 val new_cgraph = G.changeNodeData(cgraph, nid, (i_temp, candi_num))
             in

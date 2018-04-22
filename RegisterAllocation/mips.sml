@@ -60,7 +60,8 @@ let
     val s = " `s0\n"
     fun sti lbl = " `s0, `s1, " ^ (lbl) ^ "\n"
     fun tsi imm = " `d0, `s0, " ^ (imm) ^ "\n"
-    fun tis imm = " `d0, " ^ (imm) ^"(`s0)\n"
+    fun dis imm = " `d0, " ^ (imm) ^"(`s0)\n"
+    fun tis imm = " `s1, " ^ (imm) ^"(`s0)\n"
     fun  si lbl = " `s0, " ^ (lbl) ^ "\n" 
     fun  ti imm = " `s0, " ^ (imm) ^ "\n"
     fun a addr  = " " ^ (addr) ^ "\n"
@@ -85,8 +86,9 @@ let
        | ("addi" | "addiu" | "slti" | "sltiu"
        | "andi" | "ori" | "xori")
        => (fn imm => oper ^ (tsi imm))
-       | ("lb" | "lh" | "lw" | "lbu" | "lhu"
-       | "sb" | "sh" | "sw")
+       | ("lb" | "lh" | "lw" | "lbu" | "lhu")
+       => (fn imm => oper ^ (dis imm))
+       | ("sb" | "sh" | "sw")
        => (fn imm => oper ^ (tis imm))
        | ("blez" | "bgtz")
        => (fn imm => oper ^ (si imm))
@@ -122,11 +124,10 @@ let
     | munchExp (T.BINOP(T.MINUS, e1, e2)) =
     result(fn r => ero((gs "sub")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.MUL, e1, e2)) =
-    result(fn r => ero((gs "mul")(""), [munchExp e1, munchExp e2],
-    [r], NONE))
+    result(fn r => ero((gs "mul")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.DIV, e1, e2)) =
-    result(fn r => ero(((gs "div")("") ^ (gs "mflo")("")), [munchExp e1, munchExp e2],
-    [r], NONE))
+    result(fn r => (ero(gs "div" "", [munchExp e1, munchExp e2], [r], NONE);
+                    ero(gs "mflo" "", [], [r], NONE)))
     | munchExp (T.BINOP(T.AND, e1, e2)) = 
     result(fn r => ero((gs "and")(""), [munchExp e1, munchExp e2], [r], NONE))
     | munchExp (T.BINOP(T.OR, e1, e2)) = 
@@ -188,11 +189,11 @@ let
     ero(gs "jr" "", [munchExp e1], [], SOME(labelList))
     | munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2))
     | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
-    ero((gs "sw")(int i), [munchExp e2], [], NONE)
+    ero((gs "sw")(int i), [munchExp e1, munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) =
-    ero("sw `d0, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
+    ero("sw `s0, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
-    ero("sw `d0, 0(`s0)\n", [munchExp e2], [], NONE)
+    ero("sw `s1, 0(`s0)\n", [munchExp e1, munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
     ero((gs "li" (int i)) , [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.BINOP(T.PLUS, T.CONST i, e1))) =
