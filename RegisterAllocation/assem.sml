@@ -17,7 +17,6 @@ structure Assem = struct
     let 
 	fun speak(assem,dst,src,jump) =
 	    let val saylab = Symbol.name    
-          val _ = print assem
 		fun f(#"`":: #"s":: i::rest) = 
 		    (explode(saytemp(List.nth(src,ord i - ord #"0"))) @ f rest)
 		  | f( #"`":: #"d":: i:: rest) = 

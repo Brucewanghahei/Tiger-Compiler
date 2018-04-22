@@ -26,8 +26,10 @@ structure Main = struct
          app (fn i => TextIO.output(out,format0 i)) instrs2;
          app (fn i => TextIO.output(TextIO.stdOut,format0 i)) instrs2;
          Color.print_regAlloc(alloc);
+         (*
          Flow.show flowgraph;
          Liveness.showlive livegraph;
+         *)
          Liveness.show infegraph;
          TextIO.output(out,epilog)
      end
