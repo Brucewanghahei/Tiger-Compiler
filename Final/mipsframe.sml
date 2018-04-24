@@ -14,7 +14,7 @@ struct
   and access = InFrame of int
              | InReg of Temp.temp
 
-  and register = string
+  type register = string
 
   (* Registers *)
   (* http://www.cs.uwm.edu/classes/cs315/Bacon/Lecture/HTML/ch05s03.html *)
@@ -65,10 +65,11 @@ struct
   val callersaveRegsExtra = [t8, t9]
   val callersaveRegs = [t0, t1, t2, t3, t4, t5, t6, t7]
   val calleesaveRegs = [s0, s1, s2, s3, s4, s5, s6, s7]
-  val user_registers = callersaveRegs @ calleesaveRegs @ callersaveRegsExtra
+
+  val user_temps = callersaveRegs @ calleesaveRegs @ callersaveRegsExtra
                            
-  val regMapList =
-      [(a0,"$a0"),(a1,"$a1"),(a2,"$a2"),(a3,"$a3"),
+  val regMapList : (Temp.temp * register) list =
+      [(a0,"$a0":register),(a1,"$a1"),(a2,"$a2"),(a3,"$a3"),
        (t0,"$t0"),(t1,"$t1"),(t2,"$t2"),(t3,"$t3"),
        (t4,"$t4"),(t5,"$t5"),(t6,"$t6"),(t7,"$t7"),
        (s0,"$s0"),(s1,"$s1"),(s2,"$s2"),(s3,"$s3"),
@@ -76,12 +77,41 @@ struct
        (t8,"$t8"),(t9,"$t9"),(v1,"$v1"),(ZERO,"$zero"),
        (FP,"$fp"),(RV,"$v0"),(SP,"$sp"),(RA,"$ra")]
 
-  val tempMap = foldl (fn ((k, v), tbl) => Temp.Map.insert(tbl, k, v))
+  val tempMap = foldl (fn ((k, v:register), tbl) => Temp.Map.insert(tbl, k, v))
                       Temp.Map.empty regMapList
 
+  structure RegMap = SplayMapFn 
+    (struct
+      type ord_key = register
+      val compare = String.compare
+     end
+    )
+
+  val registerMap = foldl (fn ((k, v), tbl) => RegMap.insert(tbl, v, k))
+                      RegMap.empty regMapList
+
+  fun temp2reg tp = case Temp.Map.find(tempMap, tp) of 
+                  SOME(reg) => reg
+                | NONE => Temp.makestring tp
+                
+  fun reg2temp reg = case RegMap.find(registerMap, reg) of
+                          SOME(tp) => tp
+                        | NONE => ErrorMsg.impossible ("no such register: " ^
+                        reg)
+
+  val user_registers = map (fn tp => let val SOME(e) = Temp.Map.find(tempMap, tp)
+                                     in e end) user_temps 
+
+  (*                                   
   fun temp2str tmp=
       case Temp.Map.find(tempMap, tmp) of
           SOME s => (Temp.makestring tmp) ^ "(" ^ s ^ ")"
+        | NONE => Temp.makestring tmp
+        *)
+
+  fun temp2str tmp=
+      case Temp.Map.find(tempMap, tmp) of
+          SOME s => s
         | NONE => Temp.makestring tmp
 
   fun newAccess (k: int ref, escape: bool): access =

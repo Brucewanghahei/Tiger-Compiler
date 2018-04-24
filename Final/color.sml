@@ -4,7 +4,7 @@ struct
 structure G = Flow.Graph
 structure L = Liveness
 structure F = MipsFrame
-type allocation = string Temp.map
+type allocation = F.register Temp.map
 type t_cnode = Temp.temp * int (* tmp, color *)
 type t_inode = L.t_inode 
 type cGraph = t_cnode G.graph
@@ -35,7 +35,7 @@ fun assert (exp, msg) =
 
 fun color (instrs: Assem.instr list,
            initAllocation: allocation,
-           registers: Temp.temp list) =
+           registers: F.register list) =
     let
         val k = List.length registers
         fun genIGraph(instrs) = 
@@ -156,12 +156,16 @@ fun color (instrs: Assem.instr list,
             end
             | select (cgraph, nil) = actualSpill cgraph (* some nodes may have color num =-1 or >= k *)
         and actualSpill (cgraph: cGraph)  =
-            (instrs, regAlloc(cgraph))
+        let
+          val new_allocation = regAlloc(cgraph)
+        in
+          (updateInstrs(instrs, new_allocation), new_allocation)
+        end
         and regAlloc (cgraph: cGraph) =
         let
           val cnumList = List.tabulate(k, fn x => x)
           val cnumRegMap = ListPair.foldl (fn (reg, cnum, mp) =>
-          IntBinaryMap.insert(mp, cnum, F.temp2str reg)) IntBinaryMap.empty
+          IntBinaryMap.insert(mp, cnum, reg)) IntBinaryMap.empty
           (registers, cnumList)
         in
           G.foldNodes 
@@ -176,12 +180,29 @@ fun color (instrs: Assem.instr list,
                                          )
           ) initAllocation cgraph
         end
+        and updateInstrs(instrs: Assem.instr list, allocation: allocation) = 
+        let
+          fun mapT (t: Temp.temp) = case Temp.Map.find(allocation, t) of
+                                        SOME(reg) => F.reg2temp reg
+                                      | NONE => t
+          fun mapTl (tl: Temp.temp list) = map mapT tl  
+          fun mapInstr (instr: Assem.instr) =
+          case instr of 
+            Assem.OPER {assem=assem, dst=dst, src=src, jump=jump} =>
+            Assem.OPER {assem=assem, dst=mapTl dst, src=mapTl src, jump=jump}
+          | Assem.MOVE {assem=assem, dst=dst, src=src} =>  
+            Assem.MOVE {assem=assem, dst=mapT dst, src=mapT src}
+          | _ => instr 
+        in
+          map mapInstr instrs
+        end
     in
         (* build -> simplify -> coalesce -> freeze 
            -> potentialSpill -> select -> actualSpill
            -> (color | regAlloc) *)
         build(origin_igrpah)
     end
+
 
 fun print_cgraph(cgraph:cGraph) = 
   G.foldNodes (fn (cnode, _) => let val (tp, cn) = G.nodeInfo(cnode) in print(F.temp2str
@@ -191,7 +212,7 @@ fun print_regAlloc(alloc_map:allocation) =
 (
 print "=========================\n";
 print "Register Allocation\n";
-Temp.Map.appi (fn (tp, reg) => print(F.temp2str tp ^ " <- " ^ reg ^"\n"))
+Temp.Map.appi (fn (tp, reg) => print(F.temp2str tp ^ " <- " ^ (reg) ^"\n"))
 alloc_map
 )
 end

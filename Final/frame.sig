@@ -18,7 +18,7 @@ sig
   val callersaveRegsExtra: Temp.temp list
   val callersaveRegs: Temp.temp list
   val calleesaveRegs: Temp.temp list
-  val user_registers: Temp.temp list
+  val user_registers: register list
 
   val wordSize: int
   val exp : access -> Tree.exp -> Tree.exp
@@ -34,6 +34,10 @@ sig
   val procEntryExit2: frame * Assem.instr list -> Assem.instr list
   val procEntryExit3: frame * Assem.instr list ->
                       { prolog:string, body:Assem.instr list, epilog:string }
-  val tempMap: string Temp.map
+  structure RegMap : ORD_MAP sharing type RegMap.Key.ord_key = register
+  val tempMap: register Temp.map
+  val registerMap: Temp.temp RegMap.map
   val temp2str: Temp.temp -> string
+  val temp2reg: Temp.temp -> register
+  val reg2temp: register -> Temp.temp
 end

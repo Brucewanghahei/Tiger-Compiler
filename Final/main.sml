@@ -20,11 +20,12 @@ structure Main = struct
          val (infegraph, livegraph) = Liveness.interferenceGraph(flowgraph)
          val {prolog, body = bodyInstrs, epilog} = F.procEntryExit3(frame, instrs2)
          val format0 = Assem.format(Temp.makestring)
+         val format1 = Assem.format(F.temp2str)
      in
          TextIO.output(out,prolog);
          app (fn i => Printtree.printtree(TextIO.stdOut, i)) stms';
-         app (fn i => TextIO.output(out,format0 i)) instrs2;
-         app (fn i => TextIO.output(TextIO.stdOut,format0 i)) instrs2;
+         app (fn i => TextIO.output(out,format1 i)) instrs3;
+         app (fn i => TextIO.output(TextIO.stdOut,format1 i)) instrs3;
          Color.print_regAlloc(alloc);
          (*
          Flow.show flowgraph;
