@@ -160,10 +160,13 @@ struct
 
   fun procEntryExit3 (frame{name=name, formals=params, k=k}, bodyInstrs) =
       {
-        prolog = "PROCEDURE " ^ Symbol.name name ^ "\n",
+        prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
+                  ^ ".text\n",
         body = bodyInstrs,
-        epilog = "END " ^ (Symbol.name name) ^ "\n"
+        epilog = "#END " ^ (Symbol.name name) ^ "\n"
       }
 
-  fun string (lbl, str) = (Symbol.name lbl) ^ str
+  fun string (lbl, str) = 
+    ".data\n" ^
+    (Symbol.name lbl) ^ " .asciiz \"" ^ str ^ "\"\n"
 end
