@@ -2,7 +2,7 @@ structure Mips: CODEGEN =
 struct
 structure Frame = MipsFrame
 structure T = Tree
-structure F = Frame
+structure F = MipsFrame
 structure A = Assem
 
 fun int x = if x >= 0 then Int.toString x else "-" ^ (Int.toString (~x))
@@ -215,15 +215,21 @@ let
   and munchArgs (i, []) = []
     | munchArgs (i, arg::tl) =
       let
-          val len = List.length Frame.argRegs
+          val len = List.length F.argRegs
           val dstTemp = ref F.FP;
-          (* fist arg is static link *)
-          val dst = if (i > 0 andalso i < len + 1)
-                    then (dstTemp := List.nth(Frame.argRegs, i - 1); T.TEMP(!dstTemp))
-                    else (munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST Frame.wordSize))); T.MEM(T.TEMP(F.SP)))
+          val offset = i * F.wordSize
+          (* See Figure 6.2
+           * / arg6 /
+           * / arg5 /
+           * /  SL  /
+           *)
+          (* first arg is the static link*)
+          val dst = if (i >= 0 andalso i <= len)
+                    then (dstTemp := List.nth(F.argRegs, i); T.TEMP(!dstTemp))
+                    else (T.MEM(T.BINOP(T.PLUS, T.CONST offset, T.TEMP(F.SP))))
           val _ = munchStm(T.MOVE(dst, arg))
       in
-          if(i < len + 1) then
+          if(i <= len) then
               !dstTemp::munchArgs(i+1, tl)
           else
               []
