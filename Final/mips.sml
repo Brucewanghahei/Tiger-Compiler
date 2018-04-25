@@ -168,11 +168,22 @@ let
                         NONE
             ))
     | munchExp (T.CALL(T.NAME label, args)) =
-      (
-        ero((gs "jal" (Symbol.name label)), munchArgs(args),
-        calldefs, SOME([label]));
-        Frame.RV
-      )
+        let
+            val saveRegs = F.callersaveRegs @ F.callersaveRegsExtra
+            val len = List.length saveRegs
+            val prs = ListPair.zip(
+                    List.tabulate(len, (fn i => T.MEM(T.BINOP(T.PLUS, T.TEMP(F.SP), i * F.wordSize)))),
+                    map (fn r => T.TEMP(r)) saveRegs
+                )
+        in
+            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.MINUS, T.TEMP(F.SP), len * F.wordSize)));
+            prs >/ List.app (fn (t_mem, t_r) => munchStm(T.MOVE(t_mem, t_r)));
+            ero((gs "jal" (Symbol.name label)), munchArgs(args),
+                calldefs, SOME([label]));
+            prs >/ List.app (fn (t_mem, t_r)) => munchStm(T.MOVE(t_r, t_mem));
+            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), len * F.wordSize)));
+            Frame.RV
+        end
     (*
     | munchExp (T.CALL(_, _)) = ErrorMsg.impossible "Function call exp format error"
     *)
