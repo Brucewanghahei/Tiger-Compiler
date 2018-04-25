@@ -151,7 +151,11 @@ struct
       Tree.CALL(Tree.NAME(Temp.namedlabel name), args)
 
   fun procEntryExit1 (funFrame: frame, body: Tree.stm) =
-      let val frame{name, ...} = funFrame
+      let val frame{name, formals, k} = funFrame
+          (* load incoming arguments *)
+          val param_len = List.length formals
+          fun helper (i, 
+
           (* save/restore $ra, callee-save in frame *)
           val prs = RA::calleesaveRegs
                         >/ map (fn r => (allocLocal funFrame true, r))
@@ -175,10 +179,12 @@ struct
           (* allocate space for:
            * local variables
            * saved registers
-           * all arguments
-           * the static link
-           *)
+           * (move to caller) all arguments
+           * (move to caller) the static link
           val offset = !k + (List.length formals) + 1
+          *)
+          val offset = !k
+          
       {
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
                  ^ ".text\n"

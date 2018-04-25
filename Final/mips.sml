@@ -216,9 +216,18 @@ let
       (* See Figure 6.2
        * / arg5 /
        * / arg4 / fifth arg
+       * / arg3 /
+       * / arg2 /
+       * / arg1 /
+       * / arg0 /
        * /  SL  /
+       * 
+       * args = [sl, arg0, arg1, ...]
        *)
       let val len = List.length F.argRegs
+          val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
+                  T.BINOP(T.MINUS, T.CONST (len*F.wordSize), T.TEMP(F.SP))))   (* move $SP *)
+          val _ = munchStm(T.MOVE(T.TEMP(F.SP), T.TEMP(List.hd args))) (* store static link *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
               let
@@ -226,8 +235,8 @@ let
                                 then SOME(List.nth(F.argRegs, i))
                                 else NONE
                   val dst = case dstTemp of
-                                SOME t => t
-                              | NONE => let val offset = (i - len + 1) * F.wordSize
+                                SOME t => T.TEMP(t)
+                              | NONE => let val offset = (i+1) * F.wordSize
                                         in
                                             T.MEM(T.BINOP(T.PLUS, T.CONST offset, T.TEMP(F.SP)))
                                         end
@@ -238,7 +247,7 @@ let
                     | NONE => []
               end
       in
-          helper(0, args)
+          helper(0, List.tl args)
       end
 in
   munchStm stm;
