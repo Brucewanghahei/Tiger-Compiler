@@ -227,7 +227,7 @@ let
       let val len = List.length args
           val argRegLen = List.length F.argRegs
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
-                  T.BINOP(T.MINUS, T.CONST (len*F.wordSize), T.TEMP(F.SP))))   (* move $SP *)
+                                  T.BINOP(T.MINUS, T.TEMP(F.SP), T.CONST (len*F.wordSize)))) (* move $SP *)
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), T.TEMP(List.hd args))) (* store static link *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
