@@ -169,7 +169,7 @@ let
             ))
     | munchExp (T.CALL(T.NAME label, args)) =
       (
-        ero((gs "jal" (Symbol.name label)), munchArgs(0, args),
+        ero((gs "jal" (Symbol.name label)), munchArgs(args),
         calldefs, SOME([label]));
         Frame.RV
       )
@@ -212,27 +212,33 @@ let
 					src=[],
 					dst=[], jump=NONE})
 
-  and munchArgs (i, []) = []
-    | munchArgs (i, arg::tl) =
-      let
-          val len = List.length F.argRegs
-          val dstTemp = ref F.FP;
-          val offset = i * F.wordSize
-          (* See Figure 6.2
-           * / arg6 /
-           * / arg5 /
-           * /  SL  /
-           *)
-          (* first arg is the static link*)
-          val dst = if (i >= 0 andalso i <= len)
-                    then (dstTemp := List.nth(F.argRegs, i); T.TEMP(!dstTemp))
-                    else (T.MEM(T.BINOP(T.PLUS, T.CONST offset, T.TEMP(F.SP))))
-          val _ = munchStm(T.MOVE(dst, arg))
+  and munchArgs (args) =
+      (* See Figure 6.2
+       * / arg5 /
+       * / arg4 / fifth arg
+       * /  SL  /
+       *)
+      let val len = List.length F.argRegs
+          fun helper (i, []) = []
+            | helper (i, arg::tl) =
+              let
+                  val dstTemp = if (i < len)
+                                then SOME(List.nth(F.argRegs, i))
+                                else NONE
+                  val dst = case dstTemp of
+                                SOME t => t
+                              | NONE => let val offset = (i - len + 1) * F.wordSize
+                                        in
+                                            T.MEM(T.BINOP(T.PLUS, T.CONST offset, T.TEMP(F.SP)))
+                                        end
+                  val _ = munchStm(T.MOVE(dst, arg))
+              in
+                  case dstTemp of
+                      SOME t => t::helper(i + 1, tl)
+                    | NONE => []
+              end
       in
-          if(i <= len) then
-              !dstTemp::munchArgs(i+1, tl)
-          else
-              []
+          helper(0, args)
       end
 in
   munchStm stm;
