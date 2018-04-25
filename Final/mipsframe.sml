@@ -3,6 +3,10 @@ struct
   structure A = Assem
   val wordSize = 4;
 
+  (* infix op have to be declared in every module *)
+  infixr 3 </ fun x </ f = f x (* Right application *)
+  infix 1 >/ val op>/ = op</ (* Left pipe *)
+
   (* k means the head of the shift (the next allocation position) *)
   datatype frame = frame of {name: Temp.label,
                             formals: access list,
@@ -148,8 +152,16 @@ struct
 
   fun procEntryExit1 (funFrame: frame, body: Tree.stm) =
       let val frame{name, ...} = funFrame
+          (* save/restore $ra, callee-save in frame *)
+          val prs = RA::calleesaveRegs
+                        >/ map (fn r => (allocLocal funFrame true, r))
+          val saveInstrs = prs
+                               >/ map (fn (a, r) => Tree.MOVE(exp a (Tree.TEMP FP), Tree.TEMP r))
+          val restoreInstrs = prs
+                                  >/ List.rev
+                                  >/ map (fn (a, r) => (Tree.MOVE(Tree.TEMP r, exp a (Tree.TEMP FP))))
       in
-          Tree.SEQ (Tree.LABEL name, body)
+          Tree.SEQ (Tree.LABEL name, saveInstrs @ body @ restoreInstrs)
       end
 
   fun procEntryExit2 (funFrame, bodyInstrs) =
