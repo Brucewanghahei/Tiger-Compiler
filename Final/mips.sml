@@ -224,14 +224,15 @@ let
        * 
        * args = [sl, arg0, arg1, ...]
        *)
-      let val len = List.length F.argRegs
+      let val len = List.length args
+          val argRegLen = List.length F.argRegs
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
                   T.BINOP(T.MINUS, T.CONST (len*F.wordSize), T.TEMP(F.SP))))   (* move $SP *)
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), T.TEMP(List.hd args))) (* store static link *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
               let
-                  val dstTemp = if (i < len)
+                  val dstTemp = if (i < argRegLen)
                                 then SOME(List.nth(F.argRegs, i))
                                 else NONE
                   val dst = case dstTemp of
