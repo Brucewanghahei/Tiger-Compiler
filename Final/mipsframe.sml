@@ -171,7 +171,14 @@ struct
                      jump = SOME []}]
 
   fun procEntryExit3 (frame{name=name, formals=params, k=k}, bodyInstrs) =
-      let val offset = !k + (List.length formals) (* allocate space for all arguments*)
+      let
+          (* allocate space for:
+           * local variables
+           * saved registers
+           * all arguments
+           * the static link
+           *)
+          val offset = !k + (List.length formals) + 1
       {
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
                  ^ ".text\n"
