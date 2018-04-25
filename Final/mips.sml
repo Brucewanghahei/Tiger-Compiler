@@ -220,7 +220,7 @@ let
           (* fist arg is static link *)
           val dst = if (i > 0 andalso i < len + 1)
                     then (dstTemp := List.nth(Frame.argRegs, i - 1); T.TEMP(!dstTemp))
-                    else (munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.MINUS, T.TEMP(F.SP), T.CONST Frame.wordSize))); T.MEM(T.TEMP(F.SP)))
+                    else (munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST Frame.wordSize))); T.MEM(T.TEMP(F.SP)))
           val _ = munchStm(T.MOVE(dst, arg))
       in
           if(i < len + 1) then
