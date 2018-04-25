@@ -171,11 +171,18 @@ struct
                      jump = SOME []}]
 
   fun procEntryExit3 (frame{name=name, formals=params, k=k}, bodyInstrs) =
+      let val offset = !k + (List.length formals) (* allocate space for all arguments*)
       {
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
-                  ^ ".text\n",
+                 ^ ".text\n"
+                 ^ "sw $fp, 0$(sp)\n" (* save old FP *)
+                 ^ "move $fp $sp\n" (* set current FP to the old SP*)
+                 ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n" (* make the new SP *)
         body = bodyInstrs,
-        epilog = "#END " ^ (Symbol.name name) ^ "\n"
+        epilog = "move $sp, $fp\n" (* restore the old SP *)
+                 ^ "lw $fp, 0($sp)\n" (* restore the old FP *)
+                 ^ "jr $ra\n" (* jump to return address *)
+        "#END " ^ (Symbol.name name) ^ "\n"
       }
 
   fun string (lbl, str) = 
