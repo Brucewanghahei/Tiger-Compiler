@@ -154,7 +154,7 @@ struct
       let val frame{name, formals, k} = funFrame
           (* load incoming arguments *)
           val param_len = List.length formals
-          fun helper (i, 
+          (* fun helper (i, *)
 
           (* save/restore $ra, callee-save in frame *)
           val prs = RA::calleesaveRegs
