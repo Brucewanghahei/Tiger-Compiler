@@ -191,8 +191,8 @@ let
                 )
         in
             (* allocate space for caller-save *)
-            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.MINUS, T.TEMP(F.SP),
-            T.CONST (saveLen * F.wordSize))));
+            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP),
+            T.CONST (~(saveLen * F.wordSize)))));
             (* save caller-save *)
             prs >/ List.app (fn (t_mem, t_r) => munchStm(T.MOVE(t_mem, t_r)));
             ero((gs "jal" (Symbol.name label)), munchArgs(args),
@@ -233,6 +233,10 @@ let
     ero(gs "lw" (int i), [t2], [t1], NONE)
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
     ero((gs "li" (int i)) , [], [t], NONE)
+    | munchStm (T.MOVE(T.TEMP t1, T.TEMP t2)) =
+    ero("move `d0, `s0" , [t2], [t1], NONE)
+    | munchStm (T.MOVE(T.TEMP t1, T.MEM(T.TEMP(t2)))) =
+    ero(gs "lw" (int 0) , [t2], [t1], NONE)
     | munchStm (T.MOVE(T.TEMP t1, T.BINOP(T.PLUS, T.CONST i, T.TEMP t2))
     | (T.MOVE(T.TEMP t1, T.BINOP(T.PLUS, T.TEMP t2, T.CONST i)))) =
     ero((gs "addi" (int i)), [t2], [t1], NONE)
@@ -268,7 +272,8 @@ let
       let val len = List.length args
           val argRegLen = List.length F.argRegs
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
-                                  T.BINOP(T.MINUS, T.TEMP(F.SP), T.CONST (len*F.wordSize)))) (* move $SP *)
+                                  T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST
+                                  (~(len*F.wordSize))))) (* move $SP *)
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), List.hd args)) (* store static link *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
