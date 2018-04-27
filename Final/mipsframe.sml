@@ -203,7 +203,7 @@ struct
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
                  ^ ".text\n"
                  ^ Symbol.name name ^ ":\n"
-                 ^ "sw $fp, 0$(sp)\n" (* save old FP *)
+                 ^ "sw $fp, 0($sp)\n" (* save old FP *)
                  ^ "move $fp $sp\n" (* set current FP to the old SP*)
                  ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n", (* make the new SP *)
         body = bodyInstrs,
