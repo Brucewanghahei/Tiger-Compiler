@@ -220,6 +220,8 @@ struct
       end
 
   fun string (lbl, str) = 
-    ".data\n" ^
-    (Symbol.name lbl) ^ ": .asciiz \"" ^ str ^ "\"\n"
+    ".data\n"
+    ^ (Symbol.name lbl) ^ ":\n"
+    ^ ".word " ^ (Int.toString (String.size str)) ^ "\n"
+    ^ ".asciiz \"" ^ str ^ "\"\n"
 end
