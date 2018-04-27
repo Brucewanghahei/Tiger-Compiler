@@ -246,9 +246,15 @@ struct
 
   fun call (callLevel, decLevel, label, args) =
       let
+        (*
           val sl = get_static_link (callLevel, decLevel, Frame.FP)
+          *)
+          val sl = Tr.TEMP(Frame.FP)
       in
+        (*
           Ex (Tr.CALL(Tr.NAME label, sl::(map unEx args)))
+        *)
+          Ex (Tr.CALL(Tr.NAME label, (map unEx args)))
       end
 
 

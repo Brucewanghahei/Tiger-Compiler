@@ -41,7 +41,7 @@ struct
           fun s name = S.symbol name 
           val predefinedVars = 
               [("nil", VarEntry {access=(R.allocLocal R.outermost true), ty=T.NIL, assignable = false})
-              ,("print", FunEntry {level=R.outermost, label=s "tig_print", formals= map ty2formal [T.STRING], result=T.UNIT})
+              ,("print", FunEntry {level=R.outermost, label=s "printf", formals= map ty2formal [T.STRING], result=T.UNIT})
               ,("flush", FunEntry {level=R.outermost, label=s "tig_flush", formals=[], result=T.UNIT})
               ,("getchar", FunEntry {level=R.outermost, label=s "tig_getchar", formals=[], result=T.STRING})
               ,("ord", FunEntry {level=R.outermost, label=s "tig_ord", formals=map ty2formal [T.STRING], result=T.INT})

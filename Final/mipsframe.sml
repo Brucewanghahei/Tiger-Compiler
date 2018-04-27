@@ -121,7 +121,7 @@ struct
   fun newAccess (k: int ref, escape: bool): access =
     if escape then
       (k := !k - wordSize;
-      InFrame(!k + wordSize))
+      InFrame(!k))
     else
       InReg(Temp.newtemp())
 
@@ -197,20 +197,25 @@ struct
           val offset = !k + (List.length formals) + 1
           *)
           val offset = ~(!k)
+          (*
+          val exit = if (Symbol.name name= "tig_main")
+                    then "jal tig_exit\n" else ""  
+                    *)
       in
           
       {
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
                  ^ ".text\n"
                  ^ Symbol.name name ^ ":\n"
-                 (*^ "sw $fp, 0($sp)\n" (* save old FP *) *)
+                 ^ "sw $fp, 0($sp)\n" (* save old FP *)
                  ^ "move $fp $sp\n" (* set current FP to the old SP*)
                  ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n", (* make the new SP *)
         body = bodyInstrs,
         epilog = "move $sp, $fp\n" (* restore the old SP *)
                  ^ "lw $fp, 0($sp)\n" (* restore the old FP *)
-                 ^ "jr $ra\n" ^ (* jump to return address *)
-        "#END " ^ (Symbol.name name) ^ "\n"
+                 ^ "jr $ra\n"  (* jump to return address *)
+                 (*^ exit  exit if tig_main *)
+                 ^ "#END " ^ (Symbol.name name) ^ "\n"
       }
       end
 

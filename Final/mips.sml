@@ -115,7 +115,7 @@ let
     emit(A.LABEL{assem=assem, lab=lab})
 
   (* emit wrapper on A.MOVE *)
-  fun erm (assem, dst, src) =
+  fun erm (assem, src, dst) =
     emit(A.MOVE{assem=assem, dst=dst, src=src})
 
   fun munchExp ((T.BINOP(T.PLUS, e1, T.CONST(i)))
@@ -186,7 +186,7 @@ let
             val saveLen = List.length saveRegs
             val prs = ListPair.zip(
                     List.tabulate(saveLen, (fn i => T.MEM(T.BINOP(T.PLUS,
-                    T.TEMP(F.SP), T.CONST (i * F.wordSize))))),
+                    T.TEMP(F.SP), T.CONST ((i) * F.wordSize))))),
                     map (fn r => T.TEMP(r)) saveRegs
                 )
         in
@@ -234,7 +234,7 @@ let
     | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
     ero((gs "li" (int i)) , [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t1, T.TEMP t2)) =
-    ero("move `d0, `s0" , [t2], [t1], NONE)
+    erm("move `d0, `s0\n" , t2, t1)
     | munchStm (T.MOVE(T.TEMP t1, T.MEM(T.TEMP(t2)))) =
     ero(gs "lw" (int 0) , [t2], [t1], NONE)
     | munchStm (T.MOVE(T.TEMP t1, T.BINOP(T.PLUS, T.CONST i, T.TEMP t2))
@@ -246,10 +246,12 @@ let
     | munchStm (T.MOVE(T.TEMP t, T.NAME n)) =
     ero(gs "la" (Symbol.name n), [], [t], NONE)
     | munchStm (T.MOVE(T.TEMP t, e2)) =
-      erm("add `d0, `s0, $zero\n", t, munchExp e2)
+      erm("add `d0, `s0, $zero\n", munchExp e2, t)
   	| munchStm (T.LABEL lab) =
     erl((Symbol.name lab) ^ ":\n", lab)
     (* return value of call isn't needed *)
+    | munchStm (T.EXP(T.TEMP t)) =
+    ero("", [], [], NONE)
     | munchStm (T.EXP(e1)) =
     ero("", [munchExp e1], [], NONE)
     | munchStm _ =
@@ -274,7 +276,9 @@ let
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
                                   T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST
                                   (~(len*F.wordSize))))) (* move $SP *)
-          val _ = munchStm(T.MOVE(T.TEMP(F.SP), List.hd args)) (* store static link *)
+          (*
+          val _ = munchStm(T.MOVE(T.MEM(T.TEMP(F.SP)), List.hd args)) (* store static link *)
+          *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
               let
@@ -294,7 +298,7 @@ let
                     | NONE => []
               end
       in
-          helper(0, List.tl args)
+          helper(0, args)
       end
 in
   munchStm stm;
