@@ -5,3 +5,4 @@
 LexAnalysis/tiger.lex.sml 
 tiger.grm.*
 test-results*/
+!testcases/assem_test/*
