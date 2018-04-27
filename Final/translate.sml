@@ -106,7 +106,7 @@ struct
   fun assign (vExp, eExp) = Nx(Tr.MOVE(unEx vExp, unEx eExp))
 
   fun createArray (init_exp, size_exp) = 
-      Ex (Frame.externalCall("initArray", [unEx size_exp, unEx init_exp]))
+      Ex (Frame.externalCall("tig_initArray", [unEx size_exp, unEx init_exp]))
 
   fun seqexp [] = Ex(Tr.CONST(0))
     | seqexp exp_list =
