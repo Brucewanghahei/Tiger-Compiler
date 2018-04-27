@@ -26,6 +26,7 @@ datatype stm = SEQ of stm * stm
 
   val notRel : relop -> relop
   val commute: relop -> relop
+  val seq : stm list -> stm
 end
 
 structure Tree : TREE = 
@@ -76,5 +77,9 @@ fun commute EQ = EQ
   | commute UGT = ULT
   | commute UGE = ULE
 
+fun seq ([]) = EXP(CONST 0)
+  | seq ([tree_stm]) = tree_stm
+  | seq (tree_stm::tree_stm_tail) = SEQ(tree_stm, seq tree_stm_tail)
+  
 end
 

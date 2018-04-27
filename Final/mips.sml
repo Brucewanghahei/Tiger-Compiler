@@ -7,6 +7,10 @@ structure A = Assem
 
 fun int x = if x >= 0 then Int.toString x else "-" ^ (Int.toString (~x))
 
+(* infix op have to be declared in every module *)
+infixr 3 </ fun x </ f = f x (* Right application *)
+infix 1 >/ val op>/ = op</ (* Left pipe *)
+
 
 fun codegen (frame) (stm: Tree.stm) : Assem.instr list =
 let
@@ -173,22 +177,26 @@ let
             val argLen = List.length args
             val saveLen = List.length saveRegs
             val prs = ListPair.zip(
-                    List.tabulate(saveLen, (fn i => T.MEM(T.BINOP(T.PLUS, T.TEMP(F.SP), i * F.wordSize)))),
+                    List.tabulate(saveLen, (fn i => T.MEM(T.BINOP(T.PLUS,
+                    T.TEMP(F.SP), T.CONST (i * F.wordSize))))),
                     map (fn r => T.TEMP(r)) saveRegs
                 )
         in
             (* allocate space for caller-save *)
-            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.MINUS, T.TEMP(F.SP), saveLen * F.wordSize)));
+            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.MINUS, T.TEMP(F.SP),
+            T.CONST (saveLen * F.wordSize))));
             (* save caller-save *)
             prs >/ List.app (fn (t_mem, t_r) => munchStm(T.MOVE(t_mem, t_r)));
             ero((gs "jal" (Symbol.name label)), munchArgs(args),
                 calldefs, SOME([label]));
             (* deallocate space of out-going arguments *)
-            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST argLen * F.wordSize)));
+            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST
+            (argLen * F.wordSize))));
             (* restore caller-save *)
-            prs >/ List.app (fn (t_mem, t_r)) => munchStm(T.MOVE(t_r, t_mem));
+            prs >/ List.app (fn (t_mem, t_r) => munchStm(T.MOVE(t_r, t_mem)));
             (* deallocate space of caller-save*)
-            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), saveLen * F.wordSize)));
+            munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP),
+            T.CONST (saveLen * F.wordSize))));
             Frame.RV
         end
     (*
@@ -246,7 +254,7 @@ let
           val argRegLen = List.length F.argRegs
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
                                   T.BINOP(T.MINUS, T.TEMP(F.SP), T.CONST (len*F.wordSize)))) (* move $SP *)
-          val _ = munchStm(T.MOVE(T.TEMP(F.SP), T.TEMP(List.hd args))) (* store static link *)
+          val _ = munchStm(T.MOVE(T.TEMP(F.SP), List.hd args)) (* store static link *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
               let

@@ -48,5 +48,4 @@ sig
     val call: (level * level * Temp.label * exp list) -> exp
     
     val dummy_exp : exp
-    val seq: Tree.stm list -> Tree.stm
 end

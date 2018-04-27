@@ -144,7 +144,7 @@ struct
 
   (* given Frame.access and Tree.TEMP(Frame.FP), return a Tree.exp *)
   fun exp (InFrame(k)) fp = 
-    Tree.MEM(Tree.BINOP(Tree.PLUS, fp, Tree.CONST(k)))
+    Tree.MEM(Tree.BINOP(Tree.MINUS, fp, Tree.CONST(k)))
     | exp (InReg(t: Temp.temp)) _ = Tree.TEMP(t)
   
   fun externalCall (name, args) =
@@ -153,8 +153,16 @@ struct
   fun procEntryExit1 (funFrame: frame, body: Tree.stm) =
       let val frame{name, formals, k} = funFrame
           (* load incoming arguments *)
+          (* formarls = [sl, arg0, arg1, ..., arg4_inframe, ...] *)
           val param_len = List.length formals
-          (* fun helper (i, *)
+          val incoming_arguments = if param_len <= 4 then 
+            List.take (argRegs, param_len) >/ map (fn r => Tree.TEMP r) else
+              (argRegs >/ map (fn r => Tree.TEMP r)) @ 
+              List.tabulate(param_len-4, (fn i => Tree.MEM(Tree.BINOP(Tree.PLUS,
+              Tree.TEMP FP, Tree.CONST ((i+5)*wordSize)))))
+          val load_arguments = (formals, incoming_arguments)
+                    >/ ListPair.map (fn (local_arg, income_arg) => 
+                        Tree.MOVE(exp local_arg (Tree.TEMP FP), income_arg))
 
           (* save/restore $ra, callee-save in frame *)
           val prs = RA::calleesaveRegs
@@ -165,7 +173,12 @@ struct
                                   >/ List.rev
                                   >/ map (fn (a, r) => (Tree.MOVE(Tree.TEMP r, exp a (Tree.TEMP FP))))
       in
-          Tree.SEQ (Tree.LABEL name, saveInstrs @ body @ restoreInstrs)
+        (*
+          Tree.SEQ (Tree.LABEL name, load_arguments @ saveInstrs @ [body] @
+          restoreInstrs >/ Tree.seq)
+          *)
+          load_arguments @ saveInstrs @ [body] @
+          restoreInstrs >/ Tree.seq
       end
 
   fun procEntryExit2 (funFrame, bodyInstrs) =
@@ -183,20 +196,23 @@ struct
            * (move to caller) the static link
           val offset = !k + (List.length formals) + 1
           *)
-          val offset = !k
+          val offset = ~(!k)
+      in
           
       {
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
                  ^ ".text\n"
+                 ^ Symbol.name name ^ ":\n"
                  ^ "sw $fp, 0$(sp)\n" (* save old FP *)
                  ^ "move $fp $sp\n" (* set current FP to the old SP*)
-                 ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n" (* make the new SP *)
+                 ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n", (* make the new SP *)
         body = bodyInstrs,
         epilog = "move $sp, $fp\n" (* restore the old SP *)
                  ^ "lw $fp, 0($sp)\n" (* restore the old FP *)
-                 ^ "jr $ra\n" (* jump to return address *)
+                 ^ "jr $ra\n" ^ (* jump to return address *)
         "#END " ^ (Symbol.name name) ^ "\n"
       }
+      end
 
   fun string (lbl, str) = 
     ".data\n" ^

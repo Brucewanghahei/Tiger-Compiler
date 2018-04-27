@@ -15,12 +15,8 @@ struct
   
   val nilkw = (Ex (Tr.CONST 0))
 
-  fun seq ([]) = Tr.EXP(Tr.CONST 0)
-    | seq ([tree_stm]) = tree_stm
-    | seq (tree_stm::tree_stm_tail) = Tr.SEQ(tree_stm, seq tree_stm_tail)
-  
   fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f =
-    seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
+    Tr.seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
         genstm(t,f),
         Tr.LABEL f,
         Tr.MOVE(Tr.TEMP r, Tr.CONST 0),
@@ -118,7 +114,7 @@ struct
       val tail::body =  exp_list
       val stm_list = map unNx (List.rev body)
     in
-      Ex(Tr.ESEQ(seq stm_list, unEx tail))
+      Ex(Tr.ESEQ(Tr.seq stm_list, unEx tail))
     end
     
   fun strlit s =
@@ -149,11 +145,11 @@ struct
     val (nodes, k) = foldl (fn (field, (nodes, k)) => 
       ((move base (k*Frame.wordSize) (unEx field))::nodes, k+1)) ([], 0) field_list
   in
-    Ex(Tr.ESEQ(seq (head::(List.rev nodes)), Tr.TEMP(base)))
+    Ex(Tr.ESEQ(Tr.seq (head::(List.rev nodes)), Tr.TEMP(base)))
   end
 
   fun letexp (dec_exps, body_exp) = 
-    Ex(Tr.ESEQ(seq (map unNx dec_exps), unEx body_exp))
+    Ex(Tr.ESEQ(Tr.seq (map unNx dec_exps), unEx body_exp))
 
   fun arithOp (oper, lexp, rexp) =
   let
@@ -189,7 +185,7 @@ struct
         val testLabel = Tp.newlabel()
         val bodyLabel = Tp.newlabel()
       in
-        Nx (seq[Tr.LABEL(testLabel),
+        Nx (Tr.seq[Tr.LABEL(testLabel),
                 unCx(test) (bodyLabel, joinLabel),
                 Tr.LABEL(bodyLabel),
                 unNx(body),
@@ -205,7 +201,7 @@ struct
         val thenLabel = Tp.newlabel()
         val joinLabel = Tp.newlabel()
       in
-        Nx (seq[cond (thenLabel, joinLabel),
+        Nx (Tr.seq[cond (thenLabel, joinLabel),
                     Tr.LABEL(thenLabel),
                     unNx(thenExp),
                     Tr.LABEL(joinLabel)])
@@ -219,7 +215,7 @@ struct
         val elseLabel = Tp.newlabel()
         val joinLabel = Tp.newlabel()
       in
-        Ex (Tr.ESEQ(seq[(cond) (thenLabel, elseLabel),
+        Ex (Tr.ESEQ(Tr.seq[(cond) (thenLabel, elseLabel),
                     Tr.LABEL(thenLabel),
                     Tr.MOVE(Tr.TEMP(r), unEx(thenExp)),
                     Tr.JUMP(Tr.NAME(joinLabel), [joinLabel]),
@@ -237,7 +233,7 @@ struct
         val hi_ex = unEx hi
         val lo_ex = unEx lo
       in
-        Nx (seq[Tr.MOVE(var_ex, lo_ex),
+        Nx (Tr.seq[Tr.MOVE(var_ex, lo_ex),
                 Tr.CJUMP(Tr.LE, var_ex, hi_ex, bodyLabel, joinLabel),
                 Tr.LABEL(bodyLabel),
                 unNx(body),
