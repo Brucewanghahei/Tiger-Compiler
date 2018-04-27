@@ -144,7 +144,7 @@ struct
 
   (* given Frame.access and Tree.TEMP(Frame.FP), return a Tree.exp *)
   fun exp (InFrame(k)) fp = 
-    Tree.MEM(Tree.BINOP(Tree.MINUS, fp, Tree.CONST(k)))
+    Tree.MEM(Tree.BINOP(Tree.PLUS, fp, Tree.CONST(k)))
     | exp (InReg(t: Temp.temp)) _ = Tree.TEMP(t)
   
   fun externalCall (name, args) =

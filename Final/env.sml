@@ -38,18 +38,19 @@ struct
       let
           val dummySymbol = S.symbol ""
           fun ty2formal ty = (dummySymbol, ty)
+          fun s name = S.symbol name 
           val predefinedVars = 
               [("nil", VarEntry {access=(R.allocLocal R.outermost true), ty=T.NIL, assignable = false})
-              ,("print", FunEntry {level=R.outermost, label=Temp.newlabel(), formals= map ty2formal [T.STRING], result=T.UNIT})
-              ,("flush", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=[], result=T.UNIT})
-              ,("getchar", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=[], result=T.STRING})
-              ,("ord", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.STRING], result=T.INT})
-              ,("chr", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.INT], result=T.STRING})
-              ,("size", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.STRING], result=T.INT})
-              ,("substring", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.STRING, T.INT, T.INT], result=T.STRING})
-              ,("concat", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.STRING, T.STRING], result=T.STRING})
-              ,("not", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.INT], result=T.INT})
-              ,("exit", FunEntry {level=R.outermost, label=Temp.newlabel(), formals=map ty2formal [T.INT], result=T.UNIT})
+              ,("print", FunEntry {level=R.outermost, label=s "print", formals= map ty2formal [T.STRING], result=T.UNIT})
+              ,("flush", FunEntry {level=R.outermost, label=s "flush", formals=[], result=T.UNIT})
+              ,("getchar", FunEntry {level=R.outermost, label=s "getchar", formals=[], result=T.STRING})
+              ,("ord", FunEntry {level=R.outermost, label=s "ord", formals=map ty2formal [T.STRING], result=T.INT})
+              ,("chr", FunEntry {level=R.outermost, label=s "chr", formals=map ty2formal [T.INT], result=T.STRING})
+              ,("size", FunEntry {level=R.outermost, label=s "size", formals=map ty2formal [T.STRING], result=T.INT})
+              ,("substring", FunEntry {level=R.outermost, label=s "substring", formals=map ty2formal [T.STRING, T.INT, T.INT], result=T.STRING})
+              ,("concat", FunEntry {level=R.outermost, label=s "concat", formals=map ty2formal [T.STRING, T.STRING], result=T.STRING})
+              ,("not", FunEntry {level=R.outermost, label=s "not", formals=map ty2formal [T.INT], result=T.INT})
+              ,("exit", FunEntry {level=R.outermost, label=s "exit", formals=map ty2formal [T.INT], result=T.UNIT})
               ]
       in
           foldl (fn ((name, entry), acc) => S.enter(acc, S.symbol name, entry)) S.empty predefinedVars
