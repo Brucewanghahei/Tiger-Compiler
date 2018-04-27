@@ -4,6 +4,19 @@ structure Main = struct
   structure F = MipsFrame
   (* structure R = RegAlloc *)
 
+  (* infix op have to be declared in every module *)
+  infixr 3 </ fun x </ f = f x (* Right application *)
+  infix 1 >/ val op>/ = op</ (* Left pipe *)
+
+  fun load_library ()=
+  let
+    val libraries = ["sysspim.s", "runtimele.s"]
+  in
+    libraries
+      >/ map (fn fname => TextIO.inputAll (TextIO.openIn fname))
+      >/ String.concat
+  end
+
   fun getsome (SOME x) = x
    | getsome NONE = ErrorMsg.impossible "Fail to get value from option"
 
@@ -47,7 +60,10 @@ structure Main = struct
          val frags = (FindEscape.prog absyn; Semant.transProg absyn)
      in 
          withOpenFile (filename ^ ".s") 
-                      (fn out => (app (emitproc out) frags))
+                      (fn out => (
+                        app (emitproc out) frags;
+                        TextIO.output(out, load_library())
+                      ))
      end
 
 end
