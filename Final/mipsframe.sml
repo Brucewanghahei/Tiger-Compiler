@@ -216,5 +216,5 @@ struct
 
   fun string (lbl, str) = 
     ".data\n" ^
-    (Symbol.name lbl) ^ " .asciiz \"" ^ str ^ "\"\n"
+    (Symbol.name lbl) ^ ": .asciiz \"" ^ str ^ "\"\n"
 end
