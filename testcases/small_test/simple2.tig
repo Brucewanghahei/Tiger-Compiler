@@ -1,0 +1,14 @@
+let
+  var a := 11
+  var b := 22
+ function printint(i: int) =
+  let function f(i:int) = if 0<i 
+	     then (f(i/10); print(chr(i-i/10*10+ord("0"))))
+   in if i<0 then (print("-"); f(-i))
+      else if 0<i then f(i)
+      else print("0")
+  end
+in
+  printint(a);
+  printint(b)
+end
