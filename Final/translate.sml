@@ -11,10 +11,14 @@ struct
                | Nx of Tr.stm
                | Cx of Tp.label * Tp.label -> Tr.stm
 
+  (* infix op have to be declared in every module *)
+  infixr 3 </ fun x </ f = f x (* Right application *)
+  infix 1 >/ val op>/ = op</ (* Left pipe *)
+
   val dummy_exp = Nx(Tr.EXP(Tr.CONST(0)))
   
   val nilkw = (Ex (Tr.CONST 0))
-
+                  
   fun cond_stm (genstm: Tp.label * Tp.label -> Tr.stm) r t f =
     Tr.seq[Tr.MOVE(Tr.TEMP r, Tr.CONST 1),
         genstm(t,f),
@@ -101,6 +105,24 @@ struct
     Ex(Frame.exp frame_access
       (get_static_link(call_level, def_level, fp))
     )
+
+  fun strlit s =
+      let
+          val sfrag = List.find (fn e =>
+                                    case e of
+                                        Frame.PROC _ => false
+                                      | Frame.STRING(_, s') => s = s')
+                                (!fragments)
+      in
+          case sfrag of
+              SOME (Frame.STRING(label, _)) => Ex(Tr.NAME(label))
+            | NONE => let val newlabel = Tp.newlabel()
+                      in
+                          fragments := Frame.STRING(newlabel, s)::(!fragments);
+                          Ex(Tr.NAME(newlabel))
+                      end
+      end
+
   
   fun simpleVar (access(def_lev, fr_acc), call_lev) =
     (print("simpleVar: " ^ Frame.access2str fr_acc ^ "\n");
@@ -118,13 +140,15 @@ struct
       val t_lb = Tp.newlabel()
       val f_lb = Tp.newlabel()
       val check_stm = Tr.CJUMP(Tr.LT, Tr.TEMP(offset_tmp), get_size, t_lb, f_lb)
-      val exit_stm = Tr.EXP(Frame.externalCall("exit", [Tr.CONST 1]))
+      val msg_stm = Frame.externalCall("tig_print", [unEx (strlit "run-time error: index out of bound\n")]) >/ Tr.EXP
+      val exit_stm = Frame.externalCall("exit", [Tr.CONST 1]) >/ Tr.EXP
       val get_exp = Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base_tmp), Tr.BINOP(Tr.MUL, Tr.TEMP(offset_tmp), Tr.CONST(Frame.wordSize))))
     in
       Ex(Tr.ESEQ(Tr.seq[base_stm,
                         offset_stm,
                         check_stm,
                         Tr.LABEL(f_lb),
+                        msg_stm,
                         exit_stm,
                         Tr.LABEL(t_lb)],
                 get_exp))
@@ -153,23 +177,6 @@ struct
     in
       Ex(Tr.ESEQ(Tr.seq stm_list, unEx tail))
     end
-    
-  fun strlit s =
-      let
-          val sfrag = List.find (fn e =>
-                                      case e of
-                                          Frame.PROC _ => false
-                                        | Frame.STRING(_, s') => s = s')
-                                  (!fragments)
-      in
-          case sfrag of
-              SOME (Frame.STRING(label, _)) => Ex(Tr.NAME(label))
-            | NONE => let val newlabel = Tp.newlabel()
-                      in
-                          fragments := Frame.STRING(newlabel, s)::(!fragments);
-                          Ex(Tr.NAME(newlabel))
-                      end
-      end
 
   fun move base offset rval = Tr.MOVE(Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base),
    Tr.CONST(offset))), rval)
