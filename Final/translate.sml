@@ -36,7 +36,7 @@ struct
     | unNx (Cx genstm) = Tr.EXP(unEx (Cx genstm)) 
 
   fun unCx (Ex e) = (fn (t: Tp.label, f: Tp.label) => 
-    Tr.CJUMP(Tr.EQ, e, Tr.CONST(1), t, f))
+    Tr.CJUMP(Tr.NE, e, Tr.CONST(0), t, f))
     | unCx (Cx genstm) = genstm
     | unCx (Nx _) = (ErrorMsg.impossible "trying unCx to Nx"; fn (t,f) =>
         Tr.LABEL(t)) (* return a dummy Tree.stm *)

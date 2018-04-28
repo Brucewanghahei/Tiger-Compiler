@@ -1,0 +1,7 @@
+let
+ function pi(i:int) =
+ if (i>0) then (pi(i/10); print(chr(i-i/10*10+ord("0"))))
+in
+ pi(102);
+ pi(321)
+end

@@ -43,7 +43,9 @@ structure Main = struct
          Color.print_regAlloc(alloc);
          Flow.show flowgraph;
          Liveness.showlive livegraph;
+         (*
          Liveness.show infegraph;
+         *)
          TextIO.output(out,epilog)
      end
    | emitproc out (F.STRING(lab,s)) = TextIO.output(out,F.string(lab,s))

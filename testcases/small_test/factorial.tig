@@ -1,0 +1,14 @@
+let
+    function fact(x:int) = 
+    if (x>1) then x*fact(x-1) else 1
+    
+    function pi(i:int) =
+    if (i>0) then (pi(i/10); print(chr(i-i/10*10+ord("0"))))
+/*
+    function getinput()=
+    let
+        var s:string = ""
+*/
+in
+    pi(fact(10))
+end

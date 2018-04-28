@@ -10,5 +10,5 @@ let
   end
 in
   printint(a);
-  printint(b)
+  printint(a)
 end
