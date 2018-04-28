@@ -1,1 +1,1 @@
-if (3<4) then print("1>2")
+if (3>4) then print("1>2\n") else print("2>1\n")
