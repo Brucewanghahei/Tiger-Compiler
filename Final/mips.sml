@@ -189,6 +189,7 @@ let
                     T.TEMP(F.SP), T.CONST ((i) * F.wordSize))))),
                     map (fn r => T.TEMP(r)) saveRegs
                 )
+            val returnLabel = Temp.newlabel()
         in
             (* allocate space for caller-save *)
             munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP),
@@ -196,7 +197,8 @@ let
             (* save caller-save *)
             prs >/ List.app (fn (t_mem, t_r) => munchStm(T.MOVE(t_mem, t_r)));
             ero((gs "jal" (Symbol.name label)), munchArgs(args),
-                calldefs, SOME([label]));
+                calldefs, SOME([label, returnLabel]));
+            munchStm(T.LABEL returnLabel);
             (* deallocate space of out-going arguments *)
             munchStm(T.MOVE(T.TEMP(F.SP), T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST
             (argLen * F.wordSize))));
