@@ -130,6 +130,14 @@ struct
     trace_levels (call_lev, def_lev, Frame.FP) fr_acc
     )
 
+  fun fieldVar (var: exp, offset: exp) =
+    let
+      val tmp = Tp.newtemp()
+    in
+      Ex(Tr.ESEQ(Tr.MOVE(Tr.TEMP(tmp), Tr.BINOP(Tr.PLUS, unEx(var), Tr.BINOP(Tr.MUL, unEx(offset), Tr.CONST(Frame.wordSize)))),
+                  Tr.MEM(Tr.TEMP(tmp))))
+    end
+    
   fun subVar (base_fp: exp, offset: exp) =
     (*Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))*)
     let

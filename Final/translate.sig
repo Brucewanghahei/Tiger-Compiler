@@ -29,6 +29,7 @@ sig
     val strlit: string -> exp
     val simpleVar: access * level -> exp
     val assign: exp * exp -> exp
+    val fieldVar: exp * exp -> exp
     val subVar: exp * exp -> exp
     val createArray : exp * exp -> exp
     val createRecord: exp list -> exp
