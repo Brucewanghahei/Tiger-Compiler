@@ -193,10 +193,29 @@ structure Liveness: LIVENESS = struct
           end
         ) (igraph, tmap) lgraph
       (* insert edges *)
-      fun insertEdges (lnode, (igraph, moves)) =
+      fun insertEdges (lnode:t_lnode Graph.node, (igraph, moves)) =
         let
           val {def=def, use=use, move=move, li=li, lo=lo} = Graph.nodeInfo lnode
+          fun get_single (def_use) = List.hd (TSet.listItems def_use)
           val moves = case move of SOME (move) => move::moves | NONE => moves
+          fun update_edge single_def esc = TSet.foldl (
+            fn (loitem, igraph) =>
+              if (loitem <> esc) then
+              Graph.doubleEdge (igraph, lookNid(tmap, single_def), lookNid(tmap,
+              loitem))
+              else
+              igraph
+            ) igraph lo
+          val igraph = case TSet.isEmpty def of
+            true => igraph
+          | false => 
+              let
+                val esc = case move of SOME (_) => get_single use
+                                     | NONE => get_single def
+              in
+                update_edge (get_single def) esc
+              end
+          (*
           val igraph = TSet.foldl (
             fn (liitem1, igraph) => (TSet.foldl (
               fn (liitem2, igraph) => 
@@ -207,6 +226,7 @@ structure Liveness: LIVENESS = struct
                   igraph
               ) igraph li
             )) igraph li
+          *)
         in
           (igraph, moves)
         end
