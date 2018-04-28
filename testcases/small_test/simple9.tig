@@ -3,7 +3,9 @@ let
   var a := intarr [3] of 9
 in
   (
-    print(chr(a[4] + ord("0")));
-    ()
+    print(chr(a[0] + ord("0")))
+    ;print(chr(a[1] + ord("0")))
+    ;print("\n")
+    ;print(chr(a[4] + ord("0")))
   )
 end
