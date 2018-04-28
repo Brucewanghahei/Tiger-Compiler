@@ -29,7 +29,7 @@ fun instrs2graph instrs =
         fun sequentialScan (instrs: A.instr list):
                                     F.flowgraph * (T.label list * F.nodeID) list * (T.label * F.nodeID) list =
             let
-                fun scan (instr, (id, graph, jumpsNodes, labelNodes, def)) =
+                fun scan (instr, (id, graph, jumpsNodes, labelNodes, def, isPrevJump)) =
                     let val (dstOpt, srcOpt, jumpOpt, labelOpt, isMove) =
                             case instr of A.OPER{dst, src, jump, ...} => (SOME dst, SOME src, jump, NONE, false)
                                         | A.LABEL{lab, ...} => (NONE, NONE, NONE, SOME lab, false)
@@ -54,7 +54,7 @@ fun instrs2graph instrs =
                                                            move = moveOpt
                                                        })
                         (* connect adjacent instrs if current instr doesn't jump *)
-                        val graph'' = if id = 0 orelse isSome jumpOpt then graph'
+                        val graph'' = if isPrevJump then graph'
                                       else G.addEdge(graph', {from = id - 1, to = id})
 
                     in
@@ -70,11 +70,14 @@ fun instrs2graph instrs =
                       (* record defs in a block *)
                       case labelOpt of
                           SOME _ => TSet.union(def, nodeDef)
-                        | NONE => TSet.empty
+                        | NONE => TSet.empty,
+                      if isSome jumpOpt
+                      then true
+                      else false
                     )
                     end
-                val (_, graph, jumpsNodes, labelNodes, _)
-                    = foldl scan (0, G.empty, [], [], TSet.empty) instrs
+                val (_, graph, jumpsNodes, labelNodes, _, _)
+                    = foldl scan (0, G.empty, [], [], TSet.empty, true) instrs
             in
                 (graph, jumpsNodes, labelNodes)
             end
