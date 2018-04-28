@@ -39,5 +39,6 @@ sig
   val registerMap: Temp.temp RegMap.map
   val temp2str: Temp.temp -> string
   val temp2reg: Temp.temp -> register
+  val access2str: access -> string
   val reg2temp: register -> Temp.temp
 end

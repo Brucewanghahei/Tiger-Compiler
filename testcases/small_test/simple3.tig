@@ -1,8 +1,11 @@
 let
-function printint(i:int) = 
-   print(chr(i + ord("0")))
+function printint(i:int) =
+ let
+  x := i+1
+ in
+  print(chr(x+ord("0")))
+ end
 in
- printint(10/2);
- printint(2/5)
+ printint(5)
 end
 
