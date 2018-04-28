@@ -38,12 +38,11 @@ structure Main = struct
          TextIO.output(out,prolog);
          app (fn i => Printtree.printtree(TextIO.stdOut, i)) stms';
          app (fn i => TextIO.output(out,format1 i)) instrs3;
+         app (fn i => TextIO.output(TextIO.stdOut,format1 i)) instrs2;
          app (fn i => TextIO.output(TextIO.stdOut,format1 i)) instrs3;
          Color.print_regAlloc(alloc);
-         (*
          Flow.show flowgraph;
          Liveness.showlive livegraph;
-         *)
          Liveness.show infegraph;
          TextIO.output(out,epilog)
      end
