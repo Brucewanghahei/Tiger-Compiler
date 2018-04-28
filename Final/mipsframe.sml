@@ -118,6 +118,11 @@ struct
           SOME s => s
         | NONE => Temp.makestring tmp
 
+  fun access2str (acc: access) =
+    case acc of
+         InFrame(k) => "InFrame(" ^ (Int.toString k) ^")\n"
+       | InReg(t) => "InReg: " ^ temp2str t ^ "\n"
+
   fun newAccess (k: int ref, escape: bool): access =
     if escape then
       (k := !k - wordSize;
@@ -152,6 +157,8 @@ struct
 
   fun procEntryExit1 (funFrame: frame, body: Tree.stm) =
       let val frame{name, formals, k} = funFrame
+          val _ = print("printing " ^ (Int.toString (List.length formals)) ^ " formals\n")
+          val _ = formals >/ map access2str >/ map print
           (* load incoming arguments *)
           (* formarls = [sl, arg0, arg1, ..., arg4_inframe, ...] *)
           val param_len = List.length formals
