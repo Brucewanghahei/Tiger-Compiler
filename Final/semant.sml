@@ -19,6 +19,10 @@ end
 structure Semant :> SEMANT =
 struct
 
+  (* infix op has to be declared in every module *)
+  infixr 3 </ fun x </ f = f x (* Right application *)
+  infix 1 >/ val op>/ = op</ (* Left pipe *)
+
   (* alias *)
   structure Err = ErrorMsg
   structure A = Absyn
@@ -537,61 +541,41 @@ struct
             | t => t
 
          fun trFunDecHeaders (venv:venv, decs) =
-           let
-             val (venv', _) =
-               foldl
-                 (fn ({name, params, result, body, pos}, (acc, accTemp)) =>
-                   let
-                     val resultTy = trResult result
-                     val {nameTys, escapes, ...} = trParams params pos
-                     val newLabel = Tp.newlabel()
-                     val entry = E.FunEntry{
-                         level = R.newLevel{parent = level, name = newLabel, escapes = escapes},
-                         label = newLabel,
-                         formals = nameTys,
-                         result = resultTy
-                       }
-                   in
-                     (
-                      S.enter(acc, name, entry),
-                      case S.look(accTemp, name) of
-                        SOME _ => (err pos
-                                (msgTmpl ^ "same mutually recursive function declaration");
-                              accTemp)
-                       | NONE => S.enter(accTemp, name, entry)
-                     )
-                   end)
-                 (venv, S.empty)
+             foldr
+                 (fn ({name, params, result, body, pos}, (acc, accTemp, nameTysEscapesPrs, levels)) =>
+                     let
+                         val resultTy = trResult result
+                         val {nameTys, escapes, ...} = trParams params pos
+                         val newLabel = Tp.newlabel()
+                         val newLevel = R.newLevel{parent = level, name = newLabel, escapes = escapes}
+                         val entry = E.FunEntry{
+                                 level = newLevel,
+                                 label = newLabel,
+                                 formals = nameTys,
+                                 result = resultTy
+                             }
+                     in
+                         (
+                           S.enter(acc, name, entry),
+                           case S.look(accTemp, name) of
+                               SOME _ => (err pos
+                                              (msgTmpl ^ "same mutually recursive function declaration");
+                                          accTemp)
+                             | NONE => S.enter(accTemp, name, entry),
+                           (nameTys, escapes)::nameTysEscapesPrs,
+                           newLevel::levels
+                         )
+                     end)
+                 (venv, S.empty, [], [])
                  decs
-           in
-             venv'
-           end
-
-         val venv' = trFunDecHeaders(venv, fundecs)
+                 >/ (fn tp => (#1 tp, #3 tp, #4 tp))
+         val (venv', nameTysEscapesPrs, funLevels) = trFunDecHeaders(venv, fundecs)
 
          (* second pass to translate body*)
-         fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec) =
+         fun trFunDecBody (venv:venv, {name, params, result, body, pos}: A.fundec, nameTysEscapesPr, fun_level) =
            let
              val resultTy = trResult result
              val {nameTys, escapes, ...} = trParams params pos
-             val fun_level = case S.look(venv, name) of SOME 
-             (E.FunEntry {level=level, label=label, formals=formals,
-             result=result}) =>
-             level
-                                | NONE => (err pos "no such function"; level)
-             (*
-             fun enterParam (((name, ty), escape), venv:venv) =
-              let
-               val _ = print("allocating trFunDecBody parameters\n")
-               val access = R.allocLocal level escape
-                val _ = print("allocating finished\n")
-              in
-               S.enter(venv, name, E.VarEntry{access = access, ty
-               = ty, assignable = true})
-              end
-             val venv' = foldl enterParam venv (ListPair.zip
-             (nameTys, escapes))
-             *)
              fun enterParam (((name, ty), formal), venv:venv) =
                S.enter(venv, name, E.VarEntry{access = formal, ty=ty, assignable
                = true})
@@ -612,7 +596,7 @@ struct
                 (SOME (E.FunEntry ({level, ...}))) => R.procEntryExit(bodyExp, level))
            end
        in
-         map (fn dec => trFunDecBody(venv', dec)) fundecs;
+         app (fn (dec, (pr, level)) => trFunDecBody(venv', dec, pr, level)) (ListPair.zipEq (fundecs, ListPair.zipEq(nameTysEscapesPrs, funLevels)));
          {
           venv = venv',
           tenv = tenv ,

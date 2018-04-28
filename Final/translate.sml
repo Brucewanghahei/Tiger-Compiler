@@ -142,7 +142,7 @@ struct
       end
 
   fun move base offset rval = Tr.MOVE(Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base),
-    Tr.CONST(offset))), rval)
+   Tr.CONST(offset))), rval)
 
   fun createRecord field_list =
   let
