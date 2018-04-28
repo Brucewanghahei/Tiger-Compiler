@@ -108,7 +108,27 @@ struct
     )
 
   fun subVar (base_fp: exp, offset: exp) =
-    Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))
+    (*Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))*)
+    let
+      val base_tmp = Tp.newtemp()
+      val offset_tmp = Tp.newtemp()
+      val base_stm = Tr.MOVE(Tr.TEMP(base_tmp), unEx(base_fp))
+      val offset_stm = Tr.MOVE(Tr.TEMP(offset_tmp), unEx(offset))
+      val get_size = Tr.MEM(Tr.BINOP(Tr.MINUS, Tr.TEMP(base_tmp), Tr.CONST(Frame.wordSize)))
+      val t_lb = Tp.newlabel()
+      val f_lb = Tp.newlabel()
+      val check_stm = Tr.CJUMP(Tr.LT, Tr.TEMP(offset_tmp), get_size, t_lb, f_lb)
+      val exit_stm = Tr.EXP(Frame.externalCall("exit", [Tr.CONST 1]))
+      val get_exp = Tr.MEM(Tr.BINOP(Tr.PLUS, Tr.TEMP(base_tmp), Tr.BINOP(Tr.MUL, Tr.TEMP(offset_tmp), Tr.CONST(Frame.wordSize))))
+    in
+      Ex(Tr.ESEQ(Tr.seq[base_stm,
+                        offset_stm,
+                        check_stm,
+                        Tr.LABEL(f_lb),
+                        exit_stm,
+                        Tr.LABEL(t_lb)],
+                get_exp))
+    end
 
   fun assign (vExp, eExp) = Nx(Tr.MOVE(unEx vExp, unEx eExp))
 
