@@ -281,7 +281,7 @@ struct
                 Tr.LABEL(joinLabel)])
       end
 
-  fun call (callLevel, decLevel, label, args) =
+  fun call (label, args) =
       let
         (*
           val sl = get_static_link (callLevel, decLevel, Frame.FP)
@@ -293,6 +293,5 @@ struct
         *)
           Ex (Tr.CALL(Tr.NAME label, (map unEx args)))
       end
-
 
 end
