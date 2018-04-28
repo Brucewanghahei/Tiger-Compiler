@@ -225,11 +225,17 @@ struct
   end
 
   fun strOp(oper, lexp, rexp) = 
-  case oper of A.EqOp =>
-    Ex(Frame.externalCall("tig_stringEqual", [unEx lexp, unEx rexp]))
-     | A.PlusOp =>
-    Ex(Frame.externalCall("tig_concat", [unEx lexp, unEx rexp]))
-     | _ => (ErrorMsg.impossible "strOp not support"; dummy_exp)
+    case oper of A.EqOp =>
+      Ex(Frame.externalCall("tig_stringEqual", [unEx lexp, unEx rexp]))
+    | A.NeqOp =>
+      Ex(Frame.externalCall("tig_stringNotEqual", [unEx lexp, unEx rexp]))
+    | A.PlusOp =>
+      Ex(Frame.externalCall("tig_concat", [unEx lexp, unEx rexp]))
+    | A.LtOp =>
+      Ex(Frame.externalCall("tig_stringLT", [unEx lexp, unEx rexp]))
+    | A.GtOp =>
+      Ex(Frame.externalCall("tig_stringGT", [unEx lexp, unEx rexp]))
+    | _ => (ErrorMsg.impossible "strOp not support"; dummy_exp)
     
 
   fun whileExp (test, body, joinLabel) =
