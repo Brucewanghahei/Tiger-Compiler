@@ -64,7 +64,12 @@ struct
   fun intlit(i) = Ex(Tr.CONST(i))
 
   fun allocLocal (level(level_opt, frame, uniq)) escape =
-    access(level(level_opt, frame, uniq), Frame.allocLocal frame escape)  
+  let
+    val new_acc = Frame.allocLocal frame escape
+    val _ = print("allocLocal: " ^ Frame.access2str new_acc ^ "\n")
+  in
+    access(level(level_opt, frame, uniq), new_acc)  
+  end
 
   fun procEntryExit (body, level(l, frame, uniq)) =
       let val body' = Frame.procEntryExit1(frame, Tr.MOVE(Tr.TEMP Frame.RV, unEx(body)))
@@ -98,7 +103,9 @@ struct
     )
   
   fun simpleVar (access(def_lev, fr_acc), call_lev) =
+    (print("simpleVar: " ^ Frame.access2str fr_acc ^ "\n");
     trace_levels (call_lev, def_lev, Frame.FP) fr_acc
+    )
 
   fun subVar (base_fp: exp, offset: exp) =
     Ex(Tree.MEM(Tree.BINOP(Tree.PLUS, unEx(base_fp), unEx(offset))))

@@ -1,6 +1,10 @@
 let
 function printint(i:int) =
-  print(chr(i+ord("0")))
+let
+  var x := i + 1
+in
+  if (x > 0) print(chr(x+ord("0")))
+end
 in
  printint(5)
 end

@@ -108,7 +108,7 @@ struct
 
   fun lookupVariable(venv:venv, symbol:S.symbol, pos) =
     case S.look(venv, symbol) of
-         SOME v => SOME v
+         SOME v => (print("lookupVariable\n");  SOME v)
        | NONE => (err pos ("Undefined variable " ^ (S.name symbol)); NONE)
 
   (* use Ty.UNIT as dummy return value *)
@@ -574,15 +574,33 @@ struct
            let
              val resultTy = trResult result
              val {nameTys, escapes, ...} = trParams params pos
+             val fun_level = case S.look(venv, name) of SOME 
+             (E.FunEntry {level=level, label=label, formals=formals,
+             result=result}) =>
+             level
+                                | NONE => (err pos "no such function"; level)
+             (*
              fun enterParam (((name, ty), escape), venv:venv) =
               let
+               val _ = print("allocating trFunDecBody parameters\n")
                val access = R.allocLocal level escape
+                val _ = print("allocating finished\n")
               in
                S.enter(venv, name, E.VarEntry{access = access, ty
                = ty, assignable = true})
               end
              val venv' = foldl enterParam venv (ListPair.zip
              (nameTys, escapes))
+             *)
+             fun enterParam (((name, ty), formal), venv:venv) =
+               S.enter(venv, name, E.VarEntry{access = formal, ty=ty, assignable
+               = true})
+             val _ = print("len of nameTys: " ^ (Int.toString (List.length
+             nameTys)) ^ "\n")
+             val _ = print("len of formals: " ^ (Int.toString (List.length
+             (R.formals fun_level))) ^ "\n")
+             val venv' = foldl enterParam venv (ListPair.zipEq (nameTys,
+             (R.formals fun_level)))
              val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, level, Temp.newlabel())
            in
              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
