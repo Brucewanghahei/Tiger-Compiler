@@ -35,6 +35,7 @@ structure Liveness: LIVENESS = struct
     type t_fnode = Flow.t_node FGraph.node
     fun transFlow2Live () = 
     let
+      (*
       (* Firstly, copy the original flow graph *)
       (* Only nodes copied, edges remain uncopied *)
       fun init (flownode: t_fnode, livegraph) =
@@ -72,6 +73,13 @@ structure Liveness: LIVENESS = struct
       end
 
       val transgraph:t_lgraph = LiveGraph.foldNodes trans initgraph flow
+      *)
+      val transgraph:t_lgraph = LiveGraph.transgraph (flow, fn a_attr =>
+        let
+          val {def=def, use=use, move=move} = a_attr
+        in
+          {def=def, use=use, move=move, li=TSet.empty, lo=TSet.empty}
+        end)
 
       (* Third, recursively calculate the liveness *)
       fun liveiterate () = 

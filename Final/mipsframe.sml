@@ -208,7 +208,7 @@ struct
                  ^ ".text\n"
                  ^ Symbol.name name ^ ":\n"
                  ^ "sw $fp, 0($sp)\n" (* save old FP *)
-                 ^ "move $fp $sp\n" (* set current FP to the old SP*)
+                 ^ "move $fp, $sp\n" (* set current FP to the old SP*)
                  ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n", (* make the new SP *)
         body = bodyInstrs,
         epilog = "move $sp, $fp\n" (* restore the old SP *)
