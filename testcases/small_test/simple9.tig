@@ -1,0 +1,9 @@
+let
+  type intarr = array of int
+  var a := intarr [3] of 9
+in
+  (
+    print(chr(a[4] + ord("0")));
+    ()
+  )
+end
