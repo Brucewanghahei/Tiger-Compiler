@@ -39,10 +39,11 @@ struct
     | unNx (Nx stm) = stm
     | unNx (Cx genstm) = Tr.EXP(unEx (Cx genstm)) 
 
-  fun unCx (Ex e) = (fn (t: Tp.label, f: Tp.label) => 
-    Tr.CJUMP(Tr.NE, e, Tr.CONST(0), t, f))
-    | unCx (Cx genstm) = genstm
-    | unCx (Nx _) = (ErrorMsg.impossible "trying unCx to Nx"; fn (t,f) =>
+  fun unCx (Ex (Tr.CONST(0))) = (fn (t: Tp.label, f: Tp.label) => Tr.JUMP(Tr.NAME(f), [f]))
+      | unCx (Ex (Tr.CONST(_))) = (fn (t: Tp.label, f: Tp.label) => Tr.JUMP(Tr.NAME(t), [t]))
+      | unCx (Ex e) = (fn (t: Tp.label, f: Tp.label) => Tr.CJUMP(Tr.NE, e, Tr.CONST(0), t, f))
+      | unCx (Cx genstm) = genstm
+      | unCx (Nx _) = (ErrorMsg.impossible "trying unCx to Nx"; fn (t,f) =>
         Tr.LABEL(t)) (* return a dummy Tree.stm *)
 
 
