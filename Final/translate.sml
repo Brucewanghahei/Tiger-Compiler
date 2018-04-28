@@ -112,8 +112,18 @@ struct
 
   fun assign (vExp, eExp) = Nx(Tr.MOVE(unEx vExp, unEx eExp))
 
-  fun createArray (init_exp, size_exp) = 
-      Ex (Frame.externalCall("tig_initArray", [unEx size_exp, unEx init_exp]))
+  fun createArray (init_exp, size_exp) =
+    let
+      val tmp = Tp.newtemp()
+  		val actual_size = Tr.BINOP(Tr.PLUS, unEx(size_exp), Tr.CONST(1)) (*actual size = array size + 1*)
+    in
+      (*Ex (Frame.externalCall("tig_initArray", [unEx size_exp, unEx init_exp]))*)
+      Ex(Tr.ESEQ(Tr.seq[Tr.MOVE(Tr.TEMP(tmp), Frame.externalCall("tig_initArray", [actual_size, unEx init_exp])),
+                        Tr.MOVE(Tr.MEM(Tr.TEMP(tmp)), unEx(size_exp)), (*save size for bounds checking*)
+                        Tr.MOVE(Tr.TEMP(tmp), Tr.BINOP(Tr.PLUS, Tr.TEMP(tmp), Tr.CONST(Frame.wordSize)))], (*actual array starts one address higher*)
+                  Tr.TEMP(tmp)))
+    end
+      
 
   fun seqexp [] = Ex(Tr.CONST(0))
     | seqexp exp_list =
