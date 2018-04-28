@@ -45,8 +45,8 @@ sig
     val ifelseExp: exp * exp * exp -> exp
     val forExp: access * exp * exp * exp * Temp.label -> exp
 
-    (* callLevel * decLevel * args -> result exp*)
-    val call: (level * level * Temp.label * exp list) -> exp
+    (* label * args -> result exp*)
+    val call: (Temp.label * exp list) -> exp
     
     val dummy_exp : exp
 end

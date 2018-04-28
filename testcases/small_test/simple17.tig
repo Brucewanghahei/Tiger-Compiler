@@ -1,0 +1,6 @@
+let
+    function test(x: int) = 
+    x & 1
+in
+    test(100)
+end
