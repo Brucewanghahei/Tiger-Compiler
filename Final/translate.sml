@@ -217,6 +217,14 @@ struct
     comp oper
   end
 
+  fun strOp(oper, lexp, rexp) = 
+  case oper of A.EqOp =>
+    Ex(Frame.externalCall("tig_stringEqual", [unEx lexp, unEx rexp]))
+     | A.PlusOp =>
+    Ex(Frame.externalCall("tig_concat", [unEx lexp, unEx rexp]))
+     | _ => (ErrorMsg.impossible "strOp not support"; dummy_exp)
+    
+
   fun whileExp (test, body, joinLabel) =
       let
         val testLabel = Tp.newlabel()

@@ -1,7 +1,7 @@
 let 
 
  type any = {any : int}
- var buffer := getchar()
+ var buffer := /*getchar()*/ "1"
 
 function readint(any: any) : int =
  let var i := 0
@@ -10,10 +10,14 @@ function readint(any: any) : int =
      function skipto() =
        while buffer=" " | buffer="\n"
          do buffer := getchar()
-  in skipto();
+  in /*skipto();*/
+     buffer := "1";
      any.any := isdigit(buffer);
+     i := i*10+ord(buffer)-ord("0");
+     /*
      while isdigit(buffer)
        do (i := i*10+ord(buffer)-ord("0"); buffer := getchar());
+       */
      i
  end
 

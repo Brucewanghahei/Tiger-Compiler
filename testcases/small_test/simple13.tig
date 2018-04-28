@@ -1,0 +1,6 @@
+let
+    var i := 9
+in
+    while i >= 0 do
+        (print(chr(i+ord("0"))); i := i - 1)
+end

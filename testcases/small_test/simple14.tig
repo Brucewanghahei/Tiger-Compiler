@@ -1,0 +1,5 @@
+let
+    var buffer := ""
+    function readword() =
+    (buffer := getchar();
+    while buffer 

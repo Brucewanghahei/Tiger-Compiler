@@ -35,6 +35,7 @@ sig
     val letexp: exp list * exp -> exp
     val arithOp : Absyn.oper * exp * exp -> exp
     val compOp : Absyn.oper * exp * exp -> exp
+    val strOp : Absyn.oper * exp * exp -> exp
     val seqexp : exp list -> exp
 
     (* utility functions *)

@@ -1,0 +1,8 @@
+let
+    var a := 1
+    var b := 2
+    var c := 3
+    var x := a < b & b < 3
+in
+    print(chr(x + ord("0")))
+end

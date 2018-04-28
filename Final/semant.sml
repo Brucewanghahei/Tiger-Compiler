@@ -223,6 +223,14 @@ struct
         val {exp=rexp, ty=rty} = trexp right;
       in
       (
+      case (lty, rty) of
+        (Ty.STRING, Ty.STRING) => (
+        case oper of (A.EqOp) => {exp=R.strOp(oper, lexp, rexp),
+          ty=Ty.INT}
+        | (A.PlusOp) => {exp=R.strOp(oper, lexp, rexp), ty=Ty.STRING}
+        | _ => (err pos "Not supported string operation"; {exp=R.dummy_exp,
+        ty=Ty.INT}))
+      | (_, _) => (
         case oper of
           (A.EqOp | A.NeqOp | A.LtOp | A.LeOp | A.GtOp | A.GeOp) => ( 
             assertTypeEq(lty, rty, err pos, "left/right operand of OpExp type" ^
@@ -235,6 +243,7 @@ struct
             assertTypeEq(Ty.INT, rty, err pos, "right operand integer required");
             {exp=R.arithOp(oper, lexp, rexp), ty=Ty.INT}
           )
+        )
       )
       end
     | trexp (A.IntExp x) =
