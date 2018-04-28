@@ -1,10 +1,6 @@
 let
 function printint(i:int) =
- let
-  x := i+1
- in
-  print(chr(x+ord("0")))
- end
+  print(chr(i+ord("0")))
 in
  printint(5)
 end
