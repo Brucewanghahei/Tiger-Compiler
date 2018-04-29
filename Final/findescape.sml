@@ -26,11 +26,11 @@ and traverseExp(env: escEnv, d: depth, s: A.exp): unit =
      | A.NilExp => ()
      | A.IntExp(_) => ()
      | A.StringExp(_) => ()
-     | A.CallExp({args, ...}) => (map (fn exp => trvsExp(exp)) args; ())
+     | A.CallExp({args, ...}) => (app (fn exp => trvsExp(exp)) args)
      | A.OpExp{left, right, ...} => (trvsExp(left); trvsExp(right))
-     | A.RecordExp{fields, ...} => ((map (fn (_, exp, _) => trvsExp(exp)) fields); ())
-     | A.SeqExp(exps) => (map (fn(exp, _) => trvsExp(exp)); ())
-     | A.AssignExp{exp, ...} => trvsExp(exp)
+     | A.RecordExp{fields, ...} => (app (fn (_, exp, _) => trvsExp(exp)) fields)
+     | A.SeqExp(exps) => (app (fn(exp, _) => trvsExp(exp)) exps)
+     | A.AssignExp{var, exp, ...} => (traverseVar(env, d, var); trvsExp(exp))
      | A.IfExp{test, then', else', ...} => (trvsExp(test); trvsExp(then');
                                             case else' of
                                                 SOME exp => trvsExp(exp)
@@ -56,7 +56,7 @@ and traverseDecs(env: escEnv, d: depth, s: A.dec list): escEnv =
     let fun trvsDec(dec, env) =
             case dec of
                 A.FunctionDec(decs) =>
-                (map (fn {params, body, ...} =>
+                (app (fn {params, body, ...} =>
                          let val env' = foldl (fn ({name, escape, ...}, env) => S.enter(env, name, (d+1, escape))) env params
                          in
                              traverseExp(env', d+1, body)
