@@ -4,8 +4,8 @@ absyn.sml
 errormsg.sml
 table.sig
 table.sml
-parsetest.sml
 prabsyn.sml
+parsetest.sml
 symbol.sml
 types.sml
 tiger.lex
