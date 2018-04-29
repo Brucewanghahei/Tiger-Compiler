@@ -12,7 +12,8 @@ struct
 	  fun parseerror(s,p1,p2) = ErrorMsg.error p1 s
 	  val lexer = LrParser.Stream.streamify (Lex.makeLexer get)
 	  val (absyn, _) = TigerP.parse(30,lexer,parseerror,())
-        val _ = PrintAbsyn.print(TextIO.stdOut, absyn)
+      val _ = FindEscape.prog absyn
+      val _ = PrintAbsyn.print(TextIO.stdOut, absyn)
        in TextIO.closeIn file;
 	   absyn
       end handle LrParser.ParseError => raise ErrorMsg.Error
