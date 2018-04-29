@@ -603,9 +603,8 @@ struct
              (S.name name) ^ " type mismatch.\nReturn type: " ^
              (Ty.name resultTy) ^ "\nBody type: " ^ (Ty.name
              bodyTy))
-            ;
-             (case lookupFunEntry(venv, name, pos) of
-                (SOME (E.FunEntry ({level, ...}))) => R.procEntryExit(bodyExp, level))
+           ;
+             R.procEntryExit(bodyExp, fun_level)
            end
        in
          app (fn (dec, (pr, level)) => trFunDecBody(venv', dec, pr, level)) (ListPair.zipEq (fundecs, ListPair.zipEq(nameTysEscapesPrs, funLevels)));
