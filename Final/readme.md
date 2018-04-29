@@ -1,4 +1,4 @@
-Final
+Final Phase
 ===
 
 ## Patches for translate:
@@ -8,3 +8,6 @@ Final
 4. Array size is added and stored at the head of the array when it is created, which makes it possible to do bound check for safety
 5. When making a new level, we set all the newest argument as escapes
 6. For string comparison, since the externalCall only contains “stringEqual”, we will not consider about “stringLT” and “stringGT”
+
+## Patches for semantic:
+1. Built-in functions such as print, chr, ord are added into the base environment, which were missed in the previous phase.
