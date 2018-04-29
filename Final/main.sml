@@ -58,7 +58,9 @@ structure Main = struct
 
   fun compile filename = 
      let val absyn = Parse.parse filename
-         val frags = (FindEscape.prog absyn; Semant.transProg absyn)
+         val _ = FindEscape.prog absyn
+         val _ = PrintAbsyn.print(TextIO.stdOut, absyn)
+         val frags = Semant.transProg absyn
      in 
          withOpenFile (filename ^ ".s") 
                       (fn out => (
