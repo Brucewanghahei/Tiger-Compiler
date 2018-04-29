@@ -1,23 +1,28 @@
 let
 
+    var buffer := ""
     function readint() : int =
      let var i := 0
-         var buffer := ""
          function isdigit(s : string) : int = 
               ord(s)>=ord("0") & ord(s)<=ord("9")
          function skipto() =
            while buffer=" " | buffer="\n"
              do buffer := getchar()
       in 
-         /* skipto(); */
-         /* buffer := getchar(); */
-         /*
-         i := i*10+ord(buffer)-ord("0");
+         skipto();
+         buffer := getchar();
          while isdigit(buffer)
            do (i := i*10+ord(buffer)-ord("0"); buffer := getchar());
-         */
          i
      end
+
+ function printint(i: int) =
+  let function f(i:int) = if 0<i 
+	     then (f(i/10); print(chr(i-i/10*10+ord("0"))))
+   in if i<0 then (print("-"); f(-i))
+      else (if 0<i then f(i)
+      else print("0"))
+  end
 in
-    readint()
+    printint(readint())
 end

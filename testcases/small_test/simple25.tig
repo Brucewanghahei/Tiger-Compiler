@@ -1,10 +1,13 @@
 let
-    var a := 1
+    var a := 3
     function foo (): int =
     let
-        var b := a + 1
+        var b := 0
     in
+        (while b >= 0 & a > 0 do
+            (b := b + a; a := a - 1)
         b
+        )
     end
 in
     print(chr(foo()+ord("0")))
