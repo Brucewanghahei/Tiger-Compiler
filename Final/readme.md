@@ -28,7 +28,7 @@ In `procEntryExit1` we will copy all incoming arguments in `$a0-$a3` or `offset(
 
 ### Static Link
 The current implementation of static link has a problem that it doesn't work with complex nested function calls that using the outer variables, 
-because we stored the static link directly to the stack instead of passing it through the first function argument. When we find variables in outer closure in function `f`, we use the information of where `f` is defined rather than where it is called. We are fixing this bug and will submit it later.
+because we stored the static link directly to the stack in `procEntryExit1` instead of passing it through the first function argument. When we find variables in outer closure in function `f`, we use the information of where `f` is defined rather than where it is called. We are fixing this bug and will submit it later.
 
 ## Patches
 ### Instruction Selection
