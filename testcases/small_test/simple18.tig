@@ -1,0 +1,18 @@
+let
+    function readword(): string = 
+    let
+        var buffer := ""
+        var cnt := 10
+        var body := while cnt > 0 do (
+            buffer := getchar();
+            print("received: ");
+            print(buffer);
+            print("\n");
+            cnt := cnt - 1
+        )
+    in
+        buffer
+    end
+in
+    readword()
+end
