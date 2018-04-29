@@ -166,6 +166,23 @@ let
                         [r],
                         NONE
             ))
+    | munchExp ((T.MEM(T.BINOP(T.MINUS, T.TEMP t, T.CONST i)))
+  	           | (T.MEM(T.BINOP(T.MINUS, T.CONST i, T.TEMP t)))) =
+      result(fn r => ero(
+                        (gs "lw" (int (~i))),
+                        [t],
+                        [r],
+                        NONE
+            ))
+
+    | munchExp ((T.MEM(T.BINOP(T.MINUS, e1, T.CONST i)))
+  	           | (T.MEM(T.BINOP(T.MINUS, T.CONST i, e1)))) =
+      result(fn r => ero(
+                        (gs "lw" (int (~i))),
+                        [munchExp e1],
+                        [r],
+                        NONE
+            ))
   	| munchExp (T.MEM(T.CONST i)) =
       result(fn r => ero(
                         "lw `d0, " ^ int i ^ "($zero)\n",
@@ -226,6 +243,9 @@ let
     | munchStm ((T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2))
     | (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2))) =
     ero((gs "sw")(int i), [munchExp e1, munchExp e2], [], NONE)
+    | munchStm ((T.MOVE(T.MEM(T.BINOP(T.MINUS, T.CONST i, e1)), e2))
+    | (T.MOVE(T.MEM(T.BINOP(T.MINUS, e1, T.CONST i)), e2))) =
+      ero((gs "sw")(int (~i)), [munchExp e1, munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) =
     ero("sw `s0, " ^ (int i) ^ "($zero)\n", [munchExp e2], [], NONE)
     | munchStm (T.MOVE(T.MEM(e1), e2)) =
