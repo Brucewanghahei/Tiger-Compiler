@@ -1,0 +1,19 @@
+let
+    var gg := 5
+
+    function a(x:int): int =
+    let
+        var y := x +1
+    in
+        b(y)
+    end
+
+    function b(y:int): int =
+    let
+        var z := y + gg + 1
+    in
+        z
+    end
+in
+    print(chr(a(0)+ord("0")))
+end

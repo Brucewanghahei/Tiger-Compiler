@@ -1,0 +1,5 @@
+let
+    function f(x:int): int = x + 1
+in
+    print(chr(f(5) + ord("0")))
+end

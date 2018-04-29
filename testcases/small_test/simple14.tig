@@ -14,6 +14,7 @@ let
         ;
       s
     end
+  function f():string = readline()
 in
-  print("readline: " + readline() + "\n")
+  print("readline: " + f() + "\n")
 end

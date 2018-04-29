@@ -154,7 +154,11 @@ struct
     | exp (InReg(t: Temp.temp)) _ = Tree.TEMP(t)
   
   fun externalCall (name, args) =
-      Tree.CALL(Tree.NAME(Temp.namedlabel name), args)
+  let
+    val sl = Tree.TEMP FP (* dummy static link *)
+  in
+    Tree.CALL(Tree.NAME(Temp.namedlabel name), sl::args)
+  end
 
   fun procEntryExit1 (funFrame: frame, body: Tree.stm) =
       let val frame{name, formals, k} = funFrame

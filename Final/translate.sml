@@ -317,6 +317,8 @@ struct
 
   fun call (callLevel, funLevel, label, args) =
       let
+        val _ = print("Calling " ^ Symbol.name label ^ " with arg len: "
+                ^ (Int.toString (List.length args)) ^ "\n")
         val level(_, _, callUniq) = callLevel
         val level(decLevel_opt, _, _) =  funLevel
         val sl = case decLevel_opt of
