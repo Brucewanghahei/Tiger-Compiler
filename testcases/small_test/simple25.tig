@@ -1,0 +1,11 @@
+let
+    var a := 1
+    function foo (): int =
+    let
+        var b := a + 1
+    in
+        b
+    end
+in
+    print(chr(foo()+ord("0")))
+end
