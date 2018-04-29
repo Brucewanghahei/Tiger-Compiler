@@ -1,5 +1,19 @@
 let
-    var buffer := ""
-    function readword() =
-    (buffer := getchar();
-    while buffer 
+  function readline():string =
+    let
+      var s := ""
+      var c := getchar()
+    in
+      while not(c = "\n")
+      do
+        (
+          print(c)
+          ;s := s + c
+          ;c := getchar()
+        )
+        ;
+      s
+    end
+in
+  print("readline: " + readline() + "\n")
+end
