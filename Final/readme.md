@@ -41,9 +41,9 @@ because we stored the static link directly to the stack in `procEntryExit1` inst
 1. (1 pt): When unCxing an Ex, we take false label if the expression is zero and true label if it is non-zero (not just if it is equal to 1)
 2. (2 pts): Field variable is added, which was treated as subscript variable before
 3. (7 pts): Safety checks are added when indexing by a subscript by multiplying the wordSize
-4. (1 pt): Array size is added and stored at the head of the array when it is created, which makes it possible to do bound check for safety
-5. (4 pts): When making a new level, we set all the newest argument as escapes
-6. (2 pts): For string comparison, since the externalCall only contains “stringEqual”, we will not consider about “stringLT” and “stringGT”
+4. (1 pt): For string comparison, since the externalCall only contains “stringEqual”, we will not consider about “stringLT” and “stringGT”
+5. (4 pts): Array size is added and stored at the head of the array when it is created, which makes it possible to do bound check for safety
+6. (2 pts): When making a new level, we set all the newest argument as escapes
 
 ### Semantic:
 1. (3 pts): Built-in functions such as print, chr, ord are added into the base environment, which were missed in the previous phase.
