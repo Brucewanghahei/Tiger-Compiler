@@ -1,0 +1,14 @@
+let
+ function xxx() = 
+ let
+ var i := 1
+ var buffer := ""
+ function skipto() =
+   while (buffer=" " | buffer="\n")
+     do buffer := getchar()
+ in
+ i
+ end
+in
+ xxx()
+end

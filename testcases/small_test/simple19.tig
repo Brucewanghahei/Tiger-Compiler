@@ -1,0 +1,32 @@
+let
+     function printint(i: int) =
+      let function f(i:int) = if 0<i 
+             then (f(i/10); print(chr(i-i/10*10+ord("0"))))
+       in if i<0 then (print("-"); f(-i))
+          else (if 0<i then f(i)
+          else print("0"))
+      end
+    function readint(): int = 
+    let
+        function isDigit(s:string) :int=
+            ord(s) > ord("0") & ord(s) < ord("9")
+        var buffer := ""
+        var i := 0
+        var temp := getchar()
+        var body := while not(temp = "\n" | temp = " ") do (
+            buffer := buffer + temp;
+            print("received: ");
+            print(buffer);
+            print("\n");
+            print("isDigit?: ");
+            if isDigit(temp) then print("true") else print("false");
+            print("\n");
+            if isDigit(temp) then i := i*10 + ord(temp) - ord("0");
+            temp := getchar()
+        )
+    in
+        i
+    end
+in
+    printint(readint())
+end
