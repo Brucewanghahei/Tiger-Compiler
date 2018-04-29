@@ -315,17 +315,20 @@ struct
                 Tr.LABEL(joinLabel)])
       end
 
-  fun call (label, args) =
+  fun call (callLevel, funLevel, label, args) =
       let
-        (*
-          val sl = get_static_link (callLevel, decLevel, Frame.FP)
-          *)
-          val sl = Tr.TEMP(Frame.FP)
+        val level(_, _, callUniq) = callLevel
+        val level(decLevel_opt, _, _) =  funLevel
+        val sl = case decLevel_opt of
+          SOME(decLevel) =>
+              get_static_link (callLevel, decLevel, Frame.FP)
+        | NONE =>
+              Tr.TEMP(Frame.FP)
+              (*
+              get_static_link (callLevel, decLevel, Frame.FP)
+              *)
       in
-        (*
           Ex (Tr.CALL(Tr.NAME label, sl::(map unEx args)))
-        *)
-          Ex (Tr.CALL(Tr.NAME label, (map unEx args)))
       end
 
 end

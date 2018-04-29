@@ -47,7 +47,7 @@ sig
     val forExp: access * exp * exp * exp * Temp.label -> exp
 
     (* label * args -> result exp*)
-    val call: (Temp.label * exp list) -> exp
+    val call: (level*level*Temp.label * exp list) -> exp
     
     val dummy_exp : exp
 end

@@ -316,7 +316,7 @@ struct
                SOME (E.FunEntry{level=funLevel, label=label, formals=formals, result=result}) =>
                (checkFuncParams(S.name func, formals, map #ty arg_exps, pos);
                 {
-                  exp = R.call(label, map #exp arg_exps),
+                  exp = R.call(level, funLevel, label, map #exp arg_exps),
                   ty = result
                })
              | NONE => {

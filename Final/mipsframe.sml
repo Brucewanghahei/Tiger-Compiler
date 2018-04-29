@@ -134,6 +134,7 @@ struct
   fun newFrame {name: Temp.label, escapes: bool list} =
   let
     val k = ref 0;
+    val reserve_fp = newAccess(k, true)
     val formals = map 
       (fn escape => newAccess(k, escape))
       escapes
@@ -204,6 +205,7 @@ struct
           val offset = !k + (List.length formals) + 1
           *)
           val offset = ~(!k)
+        val sf = Int.toString wordSize
           (*
           val exit = if (Symbol.name name= "tig_main")
                     then "jal tig_exit\n" else ""  
@@ -214,12 +216,14 @@ struct
         prolog = "#PROCEDURE " ^ Symbol.name name ^ "\n"
                  ^ ".text\n"
                  ^ Symbol.name name ^ ":\n"
+                 ^ "addi $sp, $sp, -" ^ sf ^ "\n"
                  ^ "sw $fp, 0($sp)\n" (* save old FP *)
-                 ^ "move $fp, $sp\n" (* set current FP to the old SP*)
-                 ^ "addi $sp, $sp, -" ^ Int.toString(offset) ^ "\n", (* make the new SP *)
+                 ^ "addi $fp, $sp, " ^ sf ^ "\n" (* set current FP to the old SP*)
+                 ^ "addi $sp, $sp, -" ^ Int.toString(offset - wordSize) ^ "\n", (* make the new SP *)
         body = bodyInstrs,
-        epilog = "move $sp, $fp\n" (* restore the old SP *)
+        epilog = "addi $sp, $fp, -"^ sf ^"\n" (* restore the old SP *)
                  ^ "lw $fp, 0($sp)\n" (* restore the old FP *)
+                 ^ "addi $sp, $sp, "^ sf ^"\n"
                  ^ "jr $ra\n"  (* jump to return address *)
                  (*^ exit  exit if tig_main *)
                  ^ "#END " ^ (Symbol.name name) ^ "\n"

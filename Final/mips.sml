@@ -277,10 +277,8 @@ let
           val argRegLen = List.length F.argRegs
           val _ = munchStm(T.MOVE(T.TEMP(F.SP), 
                                   T.BINOP(T.PLUS, T.TEMP(F.SP), T.CONST
-                                  (~(len*F.wordSize))))) (* move $SP *)
-          (*
+                                  (~((len)*F.wordSize))))) (* move $SP *)
           val _ = munchStm(T.MOVE(T.MEM(T.TEMP(F.SP)), List.hd args)) (* store static link *)
-          *)
           fun helper (i, []) = []
             | helper (i, arg::tl) =
               let
@@ -300,7 +298,7 @@ let
                     | NONE => []
               end
       in
-          helper(0, args)
+          helper(0, List.tl args)
       end
 in
   munchStm stm;
