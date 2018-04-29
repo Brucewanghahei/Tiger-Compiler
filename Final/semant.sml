@@ -597,7 +597,7 @@ struct
              (R.formals fun_level))) ^ "\n")
              val venv' = foldl enterParam venv (ListPair.zipEq (nameTys,
              (R.formals fun_level)))
-             val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, level, Temp.newlabel())
+             val {exp = bodyExp, ty = bodyTy} = transExp(venv', tenv, body, fun_level, Temp.newlabel())
            in
              assertTypeEq(bodyTy, resultTy, err pos, msgTmpl ^
              (S.name name) ^ " type mismatch.\nReturn type: " ^

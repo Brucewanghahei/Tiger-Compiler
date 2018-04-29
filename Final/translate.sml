@@ -85,6 +85,7 @@ struct
   fun get_static_link (call_level, def_level, fp) =
   let
     fun trace (cur_level, tgt_level) exp=
+      (print("trace\n");
         case cur_level of
             level(NONE, _, _) => exp
           | _ => 
@@ -98,8 +99,11 @@ struct
                     (* static link offset is 0 *)
                     trace (prt_level, tgt_level) (Tr.MEM exp)
             end
+        )
   in
+    (print("tracing\n");
     trace (call_level, def_level) (Tr.TEMP fp)
+    )
   end
 
   fun trace_levels (call_level, def_level, fp) frame_access =
